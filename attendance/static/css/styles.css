@@ -1,0 +1,217 @@
+/* Global Styles */
+:root {
+    --primary-color: #0d6efd;
+    --primary-dark: #0a58ca;
+    --success-color: #198754;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --light-color: #f8f9fa;
+    --dark-color: #212529;
+}
+
+body {
+    background-color: #f5f5f5;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Card Enhancements */
+.card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+    transition: transform 0.3s, box-shadow 0.3s;
+    overflow: hidden;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+    border-bottom: none;
+    padding: 15px 20px;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+/* QR Code Styling */
+.qr-container {
+    display: inline-block;
+    padding: 15px;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+/* Dashboard Cards */
+.bg-primary, .bg-success, .bg-danger {
+    position: relative;
+    overflow: hidden;
+}
+
+.bg-primary::after, .bg-success::after, .bg-danger::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
+    pointer-events: none;
+}
+
+/* Form Styling */
+.form-control, .form-select {
+    padding: 10px 15px;
+    border-radius: 8px;
+    transition: all 0.3s;
+    border: 1px solid #ced4da;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.input-group-text {
+    background-color: #e9ecef;
+    border-radius: 8px 0 0 8px !important;
+    border: 1px solid #ced4da;
+    border-right: none;
+}
+
+.input-group .form-control {
+    border-radius: 0 8px 8px 0 !important;
+}
+
+/* Button Styling */
+.btn {
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-primary:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+.btn-outline-primary {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* Table Styling */
+.table {
+    vertical-align: middle;
+    border-color: #e9ecef;
+}
+
+.table th {
+    font-weight: 600;
+    background-color: #f8f9fa;
+    color: #495057;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(13, 110, 253, 0.03);
+}
+
+/* Badge Styling */
+.badge {
+    padding: 6px 10px;
+    font-weight: 500;
+    border-radius: 6px;
+}
+
+/* Navbar Enhancement */
+.navbar {
+    padding: 15px 0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.navbar-brand {
+    font-weight: 600;
+    font-size: 1.5rem;
+}
+
+.navbar-nav .nav-link {
+    padding-left: 15px !important;
+    padding-right: 15px !important;
+    position: relative;
+}
+
+.navbar-nav .nav-link.active::after {
+    content: '';
+    position: absolute;
+    width: 60%;
+    height: 3px;
+    background-color: white;
+    bottom: 0;
+    left: 20%;
+    border-radius: 3px;
+}
+
+/* Footer Styling */
+footer {
+    border-top: 1px solid #dee2e6;
+    margin-top: 50px !important;
+}
+
+/* Login and Register Pages */
+.auth-icon {
+    font-size: 3rem;
+    color: var(--primary-color);
+    margin-bottom: 1rem;
+}
+
+/* Dashboard Charts */
+canvas {
+    max-width: 100%;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 15px;
+    }
+    
+    .btn {
+        padding: 8px 16px;
+    }
+    
+    .navbar {
+        padding: 10px 0;
+    }
+}
+
+/* Animation Effects */
+.fade-in {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Utils */
+.text-truncate-2 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}

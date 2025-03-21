@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% block extra_css %}
+<style>
+    .scanner-container {
+        position: relative;
+        width: 100%;
+        max-width: 500px;
+        margin: 0 auto;
+        display: none; /* Initially hidden */
+    }
+    
+    #scanner-canvas {
+        width: 100%;
+        border: 2px solid #ddd;
+        border-radius: 10px;
+    }
+    
+    .scanner-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.3);
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+    }
+    
+    .scanner-target {
+        width: 70%;
+        height: 70%;
+        border: 2px solid #fff;
+        border-radius: 10px;
+        box-shadow: 0 0 0 4000px rgba(0, 0, 0, 0.3);
+    }
+    
+    .scanner-loader {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255, 255, 255, 0.8);
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+    }
+    
+    .spinner-border {
+        width: 3rem;
+        height: 3rem;
+    }
+    
+    .loading .scanner-loader {
+        opacity: 1;
+        pointer-events: all;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-md-10">
+        <div class="card">
+            <div class="card-header bg-primary text-white text-center py-3">
+                <h4 class="mb-0">
+                    {% if has_checked_in and not has_checked_out %}
+                        <i class="fas fa-sign-out-alt me-2"></i>Scan QR to Check Out
+                    {% else %}
+                        <i class="fas fa-sign-in-alt me-2"></i>Scan QR to Check In
+                    {% endif %}
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <p class="lead">
+                        {% if has_checked_in and not has_checked_out %}
+                            Please scan the office QR code to mark your check-out time.
+                        {% elif has_checked_in and has_checked_out %}
+                            You have already completed your attendance for today.
+                        {% else %}
+                            Please scan the office QR code to mark your attendance.
+                        {% endif %}
+                    </p>
+                </div>
+                
+                {% if has_checked_in and has_checked_out %}
+                    <div class="alert alert-success text-center">
+                        <i class="fas fa-check-circle fa-3x mb-3"></i>
+                        <h5>Your attendance for today is complete</h5>
+                        <p>You can view your attendance details in the dashboard.</p>
+                        <a href="{% url 'dashboard' %}" class="btn btn-primary mt-3">
+                            <i class="fas fa-tachometer-alt me-2"></i>Go to Dashboard
+                        </a>
+                    </div>
+                {% else %}
+                    <!-- QR Scanner Container (Initially Hidden) -->
+                    <button id="check-in-btn" class="btn btn-success">Check-In</button>
+                    <div id="qr-scanner-container" style="display: none;">
+                        <div id="qr-scanner"></div>
+                        <button id="start-scan-btn" class="btn btn-primary mt-3">Start Scanning</button>
+                        <div id="scan-result"></div>
+                    </div>
+                        <div class="scanner-loader">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                        <button id="close-scanner" class="btn btn-danger mt-3">Close</button>
+                    </div>
+                    
+                    <!-- Buttons to Open Scanner -->
+                    <div class="text-center mt-4">
+                        <div class="d-grid gap-2 col-md-6 mx-auto">
+                            <button id="startButton" class="btn btn-primary">
+                                <i class="fas fa-camera me-2"></i>Start Scanner
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div id="result-container" class="mt-4" style="display:none;">
+                        <div class="alert alert-success">
+                            <p id="result-message" class="mb-0"></p>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/@zxing/library@0.19.1"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const startButton = document.getElementById('startButton');
+        const closeScanner = document.getElementById('close-scanner');
+        const scannerContainer = document.getElementById('scanner-container');
+        const resultContainer = document.getElementById('result-container');
+        const resultMessage = document.getElementById('result-message');
+        
+        let codeReader = new ZXing.BrowserMultiFormatReader();
+        let selectedDeviceId;
+
+        // Function to start scanner
+        function startScanner() {
+            scannerContainer.style.display = 'block';
+            codeReader.listVideoInputDevices()
+                .then((videoInputDevices) => {
+                    selectedDeviceId = videoInputDevices[0].deviceId;
+
+                    codeReader.decodeFromVideoDevice(selectedDeviceId, 'scanner-canvas', (result, err) => {
+                        if (result) {
+                            console.log('QR Code detected:', result.text);
+                            codeReader.reset();
+                            scannerContainer.style.display = 'none';
+                            submitAttendance(result.text);
+                        }
+                        if (err && !(err instanceof ZXing.NotFoundException)) {
+                            console.error('Error:', err);
+                        }
+                    });
+                })
+                .catch((err) => {
+                    console.error('Error accessing camera:', err);
+                    alert('Error accessing camera. Please make sure you have granted camera permissions.');
+                });
+        }
+
+        // Function to close scanner
+        function closeScannerFunc() {
+            scannerContainer.style.display = 'none';
+            codeReader.reset();
+        }
+
+        // Attach event listeners
+        startButton.addEventListener('click', startScanner);
+        closeScanner.addEventListener('click', closeScannerFunc);
+
+        // Handle attendance submission
+        function submitAttendance(qrCode) {
+            const formData = new FormData();
+            formData.append('qr_code', qrCode);
+            
+            fetch('{% url "mark_attendance" %}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                scannerContainer.classList.remove('loading');
+                
+                if (data.status === 'success') {
+                    resultContainer.style.display = 'block';
+                    resultContainer.querySelector('.alert').className = 'alert alert-success';
+                    
+                    if (data.check_in_time) {
+                        resultMessage.innerHTML = `<i class="fas fa-check-circle me-2"></i>Check-in successful at ${data.check_in_time}!`;
+                    } else if (data.check_out_time) {
+                        resultMessage.innerHTML = `<i class="fas fa-check-circle me-2"></i>Check-out successful at ${data.check_out_time}!<br>Working hours: ${data.working_hours} hours`;
+                    }
+                    
+                    setTimeout(() => {
+                        window.location.href = '{% url "dashboard" %}';
+                    }, 3000);
+                } else {
+                    resultContainer.style.display = 'block';
+                    resultContainer.querySelector('.alert').className = 'alert alert-danger';
+                    resultMessage.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>${data.message}`;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    });
+</script>
+{% endblock %}

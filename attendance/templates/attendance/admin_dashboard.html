@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center">Employee Attendance</h2>
+    
+    <div class="mb-3">
+        <label for="attendance-date">Select Date:</label>
+        <input type="date" id="attendance-date" class="form-control" value="{{ today }}">
+    </div>
+
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Employee</th>
+                <th>Check-in Time</th>
+                <th>Check-out Time</th>
+            </tr>
+        </thead>
+        <tbody id="attendance-table">
+            <tr><td colspan="3" class="text-center">Select a date to view attendance</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('attendance-date').addEventListener('change', fetchAttendance);
+
+    function fetchAttendance() {
+        let date = document.getElementById('attendance-date').value;
+        fetch(`/api/attendance/?date=${date}`)
+        .then(response => response.json())
+        .then(data => {
+            let tbody = document.getElementById('attendance-table');
+            tbody.innerHTML = "";
+            
+            if (data.attendance.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center">No records found</td></tr>`;
+                return;
+            }
+            
+            data.attendance.forEach(record => {
+                let row = `<tr>
+                    <td>${record.username}</td>
+                    <td>${record.check_in}</td>
+                    <td>${record.check_out}</td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

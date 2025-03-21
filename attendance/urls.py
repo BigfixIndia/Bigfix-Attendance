@@ -1,0 +1,32 @@
+from django.urls import path, include
+from django.contrib.auth import views as auth_views
+from django.contrib.auth import login, authenticate
+from . import views 
+from django.conf import settings
+from django.conf.urls.static import static
+ 
+
+urlpatterns = [
+    path('', views.index, name='index'),
+    path('register/', views.register, name='register'),
+    path('dashboard/', views.dashboard, name='dashboard'),
+    path('scan-qr/', views.scan_qr_code, name='scan_qr_code'),
+    path("process_qr/", views.process_qr_scan, name="process_qr_scan"),  
+    path('mark-attendance/', views.mark_attendance, name='mark_attendance'),
+    path('generate_qr_code/', views.generate_qr_code, name='generate_qr_code'),
+    path('admin_attendance_view/', views.admin_attendance_view, name='admin_attendance'),
+    path('fetch_attendance_data/', views.fetch_attendance_data, name='fetch_attendance_data'),
+    path('admin_attendance_view/', views.admin_attendance_view, name='admin_attendance'),
+    #path('logout/', views.logout, name='logout'),
+
+    # Authentication URLs
+    path('accounts/', include('django.contrib.auth.urls')),
+    path('login/', auth_views.LoginView.as_view(template_name='attendance/login.html'), name='login'),
+    path('user_login/', auth_views.LoginView.as_view(template_name='attendance/login.html'), name='user_login'),
+    path('admin-login/', auth_views.LoginView.as_view(template_name='admin_login.html'), name='admin_login'),
+    path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
+]
+
+# ✅ Serve media files during development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

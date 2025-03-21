@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance Check-out Confirmation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background-color: #198754;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+        .content {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-left: 1px solid #ddd;
+            border-right: 1px solid #ddd;
+        }
+        .footer {
+            background-color: #f1f1f1;
+            padding: 10px 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+            border-radius: 0 0 5px 5px;
+            border: 1px solid #ddd;
+        }
+        .details {
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            background-color: white;
+        }
+        .details p {
+            margin: 5px 0;
+        }
+        .button {
+            display: inline-block;
+            background-color: #198754;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h2>Attendance Check-out Confirmation</h2>
+    </div>
+    
+    <div class="content">
+        <p>Hello {{ employee.user.first_name }},</p>
+        
+        <p>This email confirms that you have successfully checked out for today.</p>
+        
+        <div class="details">
+            <p><strong>Employee ID:</strong> {{ employee.employee_id }}</p>
+            <p><strong>Name:</strong> {{ employee.user.first_name }} {{ employee.user.last_name }}</p>
+            <p><strong>Department:</strong> {{ employee.department }}</p>
+            <p><strong>Date:</strong> {{ attendance.date|date:"F d, Y" }}</p>
+            <p><strong>Check-in Time:</strong> {{ attendance.check_in_time|time:"h:i A" }}</p>
+            <p><strong>Check-out Time:</strong> {{ attendance.check_out_time|time:"h:i A" }}</p>
+            <p><strong>Working Hours:</strong> {{ attendance.working_hours }} hours</p>
+            <p><strong>Status:</strong> {{ attendance.status|title }}</p>
+        </div>
+        
+        <p>Thank you for your hard work today!</p>
+    </div>
+    
+    <div class="footer">
+        <p>This is an automated message. Please do not reply to this email.</p>
+        <p>© 2025 QR Attendance System</p>
+    </div>
+</body>
+</html>

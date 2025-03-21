@@ -1,0 +1,139 @@
+{% extends 'layouts/base.html' %}
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-12">
+        <h2 class="mb-4">
+            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+        </h2>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Employee Profile Card -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-user me-2"></i>Employee Profile</h5>
+            </div>
+            <div class="card-body text-center">
+                <!--if employee.profile_picture 
+                    <img src=" employee.profile_picture.url " alt="Profile Picture" class="img-fluid rounded-circle mb-3" style="width: 120px; height: 120px; object-fit: cover;">
+                 else -->
+                    <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 120px; height: 120px;">
+                        <i class="fas fa-user fa-4x text-secondary"></i>
+                    </div>
+                
+                
+                <h5>{{ employee.user.first_name }} {{ employee.user.last_name }}</h5>
+                <p class="text-muted mb-2">{{ employee.position }}</p>
+                <p class="badge bg-primary">{{ employee.department }}</p>
+                
+                <hr>
+                
+                <div class="text-start">
+                    <p><strong><i class="fas fa-id-card me-2"></i>Employee ID:</strong> {{ employee.employee_id }}</p>
+                    <p><strong><i class="fas fa-envelope me-2"></i>Email:</strong> {{ employee.user.email }}</p>
+                    <p><strong><i class="fas fa-phone me-2"></i>Phone:</strong> {{ employee.phone_number }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Today's Attendance Card -->
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Today's Attendance</h5>
+            </div>
+            <div class="card-body">
+                {% if has_checked_in %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>You have checked in at {{ today_attendance.check_in_time|time:"h:i A" }}
+                    </div>
+                    
+                    {% if has_checked_out %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-sign-out-alt me-2"></i>You have checked out at {{ today_attendance.check_out_time|time:"h:i A" }}
+                            <br>
+                            <strong>Total working hours:</strong> {{ today_attendance.working_hours }} hours
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>You haven't checked out yet.
+                        </div>
+                        <a href="{% url 'scan_qr_code' %}" class="btn btn-primary">
+                            <i class="fas fa-sign-out-alt me-2"></i>Check Out
+                        </a>
+                    {% endif %}
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>You haven't checked in yet.
+                    </div>
+                    <a href="{% url 'scan_qr_code' %}" class="btn btn-success">
+                        <i class="fas fa-sign-in-alt me-2"></i>Check In
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Recent Attendance Card -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Recent Attendance</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Check-in</th>
+                                <th>Check-out</th>
+                                <th>Working Hours</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for attendance in recent_attendances %}
+                                <tr>
+                                    <td>{{ attendance.date|date:"M d, Y" }}</td>
+                                    <td>{{ attendance.check_in_time|time:"h:i A" }}</td>
+                                    <td>
+                                        {% if attendance.check_out_time %}
+                                            {{ attendance.check_out_time|time:"h:i A" }}
+                                        {% else %}
+                                            <span class="badge bg-warning">Not checked out</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if attendance.working_hours %}
+                                            {{ attendance.working_hours }} hours
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if attendance.status == 'present' %}
+                                            <span class="badge bg-success">Present</span>
+                                        {% elif attendance.status == 'late' %}
+                                            <span class="badge bg-warning">Late</span>
+                                        {% elif attendance.status == 'half_day' %}
+                                            <span class="badge bg-info">Half Day</span>
+                                        {% elif attendance.status == 'absent' %}
+                                            <span class="badge bg-danger">Absent</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">No attendance records found.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
