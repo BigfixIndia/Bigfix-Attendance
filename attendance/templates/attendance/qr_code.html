@@ -16,6 +16,25 @@
 
     <!-- Scan Result -->
     <div id="scan-result" class="mt-3"></div>
+
+    {% if messages %}
+    {% for message in messages %}
+        <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-danger{% else %}alert-warning{% endif %}">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
+
+<form method="POST" action="{% url 'manual_checkin' %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-success">Manual Check-In</button>
+</form>
+
+<form method="POST" action="{% url 'manual_checkout' %}">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Manual Check-Out</button>
+</form>
+
 </div>
 
 {% block extra_css %}

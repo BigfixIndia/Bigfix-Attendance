@@ -17,6 +17,8 @@ urlpatterns = [
     path('admin_attendance_view/', views.admin_attendance_view, name='admin_attendance'),
     path('fetch_attendance_data/', views.fetch_attendance_data, name='fetch_attendance_data'),
     path('admin_attendance_view/', views.admin_attendance_view, name='admin_attendance'),
+      path('manual-checkin/', views.manual_check_in, name='manual_checkin'),
+    path('manual-checkout/', views.manual_check_out, name='manual_checkout'),
     #path('logout/', views.logout, name='logout'),
 
     # Authentication URLs

@@ -25,6 +25,8 @@ from django.views.decorators.http import require_http_methods
 from django.core.files.base import ContentFile  # ✅ Add this import
 from django.core.mail import send_mail
 from django.contrib.auth.decorators import login_required
+from django.utils.timezone import now
+import pytz
 
 
 
@@ -122,12 +124,15 @@ def register(request):
         'employee_form': employee_form
     })
 
+@csrf_exempt
 @login_required
 def dashboard(request):
+    if request.method != "GET":
+        return HttpResponseNotAllowed(["GET"])  # Return a 405 response if not GET
     # Check if the employee profile exists
     if not Attendance_Employee_data.objects.filter(user=request.user).exists():
         messages.error(request, "No employee profile found. Please contact HR.")
-        #return redirect('home')  # Redirect to a safe page instead of logout
+        return redirect('home')  # Redirect to a safe page instead of logout
     
     # Get employee object
     employee = get_object_or_404(Attendance_Employee_data, user=request.user)
@@ -334,6 +339,63 @@ def generate_qr_code(qr_data):
     print(f"✅ QR Code generated and saved at: {qr_code.image.path}")
 
     return qr_code
+
+# Define IST timezone
+IST = pytz.timezone('Asia/Kolkata')
+@login_required
+def manual_check_in(request):
+    user = request.user
+
+    try:
+        employee = Attendance_Employee_data.objects.get(user=user)
+    except Attendance_Employee_data.DoesNotExist:
+        messages.error(request, "Employee record not found.")
+        return redirect('dashboard')
+
+    today = now().astimezone(IST).date()  # Ensure correct date in IST
+    current_time = now().astimezone(IST)  # Get current IST time
+
+    attendance, created = Attendance_Attendance_data.objects.get_or_create(
+        employee=employee,
+        date=today,
+        defaults={'check_in_time': current_time}  # Set check-in time in IST
+    )
+
+    if not created and not attendance.check_in_time:
+        attendance.check_in_time = current_time
+        attendance.save()
+        messages.success(request, "Check-in recorded successfully.")
+    elif not created:
+        messages.warning(request, "You have already checked in today.")
+
+    return redirect('dashboard')
+
+@login_required
+def manual_check_out(request):
+    user = request.user
+
+    try:
+        employee = Attendance_Employee_data.objects.get(user=user)
+    except Attendance_Employee_data.DoesNotExist:
+        messages.error(request, "Employee record not found.")
+        return redirect('dashboard')
+
+    try:
+        today = now().astimezone(IST).date()  # Ensure correct date in IST
+        current_time = now().astimezone(IST)  # Get current IST time
+
+        attendance = Attendance_Attendance_data.objects.get(employee=employee, date=today)
+
+        if not attendance.check_out_time:
+            attendance.check_out_time = current_time
+            attendance.save()
+            messages.success(request, "Check-out recorded successfully.")
+        else:
+            messages.warning(request, "You have already checked out today.")
+    except Attendance_Attendance_data.DoesNotExist:
+        messages.error(request, "No check-in record found for today.")
+
+    return redirect('dashboard')
 
 def logout(request):
     request.session.flush()
