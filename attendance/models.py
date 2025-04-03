@@ -30,10 +30,11 @@ class Attendance_Attendance_data(models.Model):
         ('half_day', 'Half Day'),
     ], default='present')
     working_hours = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    overtime_hours = models.DecimalField(max_digits=5, decimal_places=2, default=0)  # ✅ New Field
     notes = models.TextField(blank=True, null=True)
 
     class Meta:
-        db_table = "attendance_attendance_data"  # ✅ Fix incorrect table name
+        db_table = "attendance_attendance_data"
         unique_together = ['employee', 'date']
 
     def __str__(self):
@@ -56,7 +57,13 @@ class Attendance_Attendance_data(models.Model):
                 self.status = 'late'
             else:
                 self.status = 'present'
-                
+            
+            # ✅ Calculate Overtime Hours (Assuming 8 hours is full-time)
+            if self.working_hours > 8:
+                self.overtime_hours = self.working_hours - 8
+            else:
+                self.overtime_hours = 0
+
         super().save(*args, **kwargs)
 
 class QR_Code(models.Model):
@@ -73,3 +80,31 @@ class QR_Code(models.Model):
         return f"QR Code - {self.location}"
 
     
+class Payroll_Salary(models.Model):
+    employee = models.OneToOneField(Attendance_Employee_data, on_delete=models.CASCADE)
+    base_salary = models.DecimalField(max_digits=10, decimal_places=2)  # Monthly Salary
+    overtime_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # Per hour
+    bonus = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    deductions = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    
+    class Meta:
+        db_table = "payroll_salary"
+    
+    def __str__(self):
+        return f"{self.employee.user.first_name} - Salary Details"
+
+class Payroll_Payments(models.Model):
+    employee = models.ForeignKey(Attendance_Employee_data, on_delete=models.CASCADE)
+    month = models.IntegerField()  # Example: April = 4
+    year = models.IntegerField()
+    total_working_days = models.IntegerField()
+    total_present_days = models.IntegerField()
+    total_overtime_hours = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    net_salary = models.DecimalField(max_digits=10, decimal_places=2)
+
+    class Meta:
+        db_table = "payroll_payments"
+        unique_together = ('employee', 'month', 'year')
+
+    def __str__(self):
+        return f"{self.employee.user.first_name} - Payroll {self.month}/{self.year}"

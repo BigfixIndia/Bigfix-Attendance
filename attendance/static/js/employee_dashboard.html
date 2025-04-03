@@ -1,0 +1,21 @@
+<h2>Welcome, {{ request.user.first_name }}</h2>
+
+<button id="viewSalaryBtn">View Salary</button>
+
+<div id="salaryDetails" style="display: none; margin-top: 10px;">
+    <p><strong>Total Present Days:</strong> <span id="presentDays"></span></p>
+    <p><strong>Total Salary Earned (Till Today):</strong> ₹<span id="totalSalary"></span></p>
+</div>
+
+<script>
+document.getElementById("viewSalaryBtn").addEventListener("click", function() {
+    fetch("/get-salary-details/")
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById("presentDays").innerText = data.present_days;
+            document.getElementById("totalSalary").innerText = data.total_salary;
+            document.getElementById("salaryDetails").style.display = "block";
+        })
+        .catch(error => console.error("Error fetching salary details:", error));
+});
+</script>

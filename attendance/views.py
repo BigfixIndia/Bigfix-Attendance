@@ -27,8 +27,11 @@ from django.core.mail import send_mail
 from django.contrib.auth.decorators import login_required
 from django.utils.timezone import now
 import pytz
-
-
+from .models import Payroll_Payments
+from .models import Attendance_Attendance_data, Payroll_Salary
+from django.contrib.admin.views.decorators import staff_member_required
+from datetime import date
+from django.shortcuts import render
 
 from .models import  Attendance_Employee_data, Attendance_Attendance_data, QR_Code
 from .forms import UserRegistrationForm, EmployeeRegistrationForm
@@ -396,6 +399,51 @@ def manual_check_out(request):
         messages.error(request, "No check-in record found for today.")
 
     return redirect('dashboard')
+
+@login_required
+def employee_payroll_view(request):
+    payroll = Payroll_Payments.objects.filter(employee=request.user.attendance_employeedata).order_by('-year', '-month')
+    return render(request, "payroll/employee_payroll.html", {"payroll": payroll})
+
+@staff_member_required
+def admin_payroll_view(request):
+    payrolls = Payroll_Payments.objects.all().order_by('-year', '-month')
+    return render(request, "payroll/admin_payroll.html", {"payrolls": payrolls})
+
+@login_required
+def employee_dashboard(request):
+    """Render the employee dashboard"""
+    return render(request, "dashboard.html")
+
+@login_required
+def get_salary_details(request):
+    """Fetch employee salary dynamically when button is clicked"""
+    from django.http import JsonResponse
+    from datetime import date
+    from .models import Attendance_Attendance_data, Payroll_Salary, Employee
+
+    try:
+        employee = Employee.objects.get(user=request.user)  # Fetch employee instance
+    except Employee.DoesNotExist:
+        return JsonResponse({"error": "No employee record found for this user"}, status=400)
+
+    today = date.today()
+    start_of_month = today.replace(day=1)
+
+    attendance_records = Attendance_Attendance_data.objects.filter(
+        employee=employee, date__range=(start_of_month, today)
+    )
+    present_days = attendance_records.filter(status__iexact="present").count()
+
+    salary_data = Payroll_Salary.objects.filter(employee=employee).first()
+    if salary_data:
+        per_day_salary = salary_data.base_salary / 26  
+        total_salary = round(present_days * per_day_salary, 2)
+    else:
+        total_salary = 0
+
+    return JsonResponse({"present_days": present_days, "total_salary": total_salary})
+
 
 def logout(request):
     request.session.flush()

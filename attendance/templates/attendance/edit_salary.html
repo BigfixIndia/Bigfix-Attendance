@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center">Edit Employee Salary</h2>
+    <form method="POST">
+        {% csrf_token %}
+        <div class="mb-3">
+            <label class="form-label">Base Salary</label>
+            <input type="number" name="base_salary" value="{{ salary.base_salary }}" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Overtime Rate (per hour)</label>
+            <input type="number" name="overtime_rate" value="{{ salary.overtime_rate }}" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Bonus</label>
+            <input type="number" name="bonus" value="{{ salary.bonus }}" class="form-control">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Deductions</label>
+            <input type="number" name="deductions" value="{{ salary.deductions }}" class="form-control">
+        </div>
+        <button type="submit" class="btn btn-success">Update Salary</button>
+        <a href="{% url 'admin_payroll' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}

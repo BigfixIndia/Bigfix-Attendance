@@ -17,8 +17,13 @@ urlpatterns = [
     path('admin_attendance_view/', views.admin_attendance_view, name='admin_attendance'),
     path('fetch_attendance_data/', views.fetch_attendance_data, name='fetch_attendance_data'),
     path('admin_attendance_view/', views.admin_attendance_view, name='admin_attendance'),
-      path('manual-checkin/', views.manual_check_in, name='manual_checkin'),
+    path('manual-checkin/', views.manual_check_in, name='manual_checkin'),
     path('manual-checkout/', views.manual_check_out, name='manual_checkout'),
+    path("payroll/employee/", views.employee_payroll_view, name="employee_payroll"),
+    path("payroll/admin/", views.admin_payroll_view, name="admin_payroll"),
+    path("dashboard/", views.employee_dashboard, name="employee_dashboard"),
+    path("get-salary-details/", views.get_salary_details, name="get_salary_details"),  # New API endpoint
+    #path("admin/download-salary-slip/<int:salary_id>/", views.download_salary_slip, name="download_salary_slip"),
     #path('logout/', views.logout, name='logout'),
 
     # Authentication URLs

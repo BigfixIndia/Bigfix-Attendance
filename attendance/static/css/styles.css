@@ -215,3 +215,13 @@ canvas {
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
+
+@media (max-width: 768px) {
+    table {
+        font-size: 14px;
+    }
+    .btn {
+        font-size: 12px;
+        padding: 5px 10px;
+    }
+}
