@@ -46,34 +46,38 @@
                 <h5 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Today's Attendance</h5>
             </div>
             <div class="card-body">
-                {% if has_checked_in %}
-                    <div class="alert alert-success">
-                        <i class="fas fa-check-circle me-2"></i>You have checked in at {{ today_attendance.check_in_time|time:"h:i A" }}
+            {% if has_checked_in %}
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    You have checked in at {{ today_attendance.check_in_time|time:"h:i A" }}
+                </div>
+
+                {% if has_checked_out %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-sign-out-alt me-2"></i>
+                        You have checked out at {{ today_attendance.check_out_time|time:"h:i A" }}<br>
+                        <strong>Total working hours:</strong> <p>Working Hours: {{ working_hours_display }}
                     </div>
-                    
-                    {% if has_checked_out %}
-                        <div class="alert alert-info">
-                            <i class="fas fa-sign-out-alt me-2"></i>You have checked out at {{ today_attendance.check_out_time|time:"h:i A" }}
-                            <br>
-                            <strong>Total working hours:</strong> {{ today_attendance.working_hours }} hours
-                        </div>
-                    {% else %}
-                        <div class="alert alert-warning">
-                            <i class="fas fa-exclamation-triangle me-2"></i>You haven't checked out yet.
-                        </div>
-                        <a href="{% url 'scan_qr_code' %}" class="btn btn-primary">
-                            <i class="fas fa-sign-out-alt me-2"></i>Check Out
-                        </a>
-                    {% endif %}
                 {% else %}
                     <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>You haven't checked in yet.
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        You haven't checked out yet.
                     </div>
-                    <a href="{% url 'scan_qr_code' %}" class="btn btn-success">
-                        <i class="fas fa-sign-in-alt me-2"></i>Check In
+                    <a href="{% url 'scan_qr_code' %}" class="btn btn-primary">
+                        <i class="fas fa-sign-out-alt me-2"></i>Check Out
                     </a>
                 {% endif %}
-            </div>
+
+            {% else %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    You haven't checked in yet.
+                </div>
+                <a href="{% url 'scan_qr_code' %}" class="btn btn-success">
+                    <i class="fas fa-sign-in-alt me-2"></i>Check In
+                </a>
+            {% endif %}
+        </div>
         </div>
 
         <!-- View salary-->
@@ -114,7 +118,13 @@
                             {% for attendance in recent_attendances %}
                                 <tr>
                                     <td>{{ attendance.date|date:"M d, Y" }}</td>
-                                    <td>{{ attendance.check_in_time|time:"h:i A" }}</td>
+                                    <td>
+                                        {% if attendance.check_in_time %}
+                                            {{ attendance.check_in_time|time:"h:i A" }}
+                                        {% else %}
+                                            <span class="badge bg-warning">Not checked in</span>
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         {% if attendance.check_out_time %}
                                             {{ attendance.check_out_time|time:"h:i A" }}
@@ -123,10 +133,10 @@
                                         {% endif %}
                                     </td>
                                     <td>
-                                        {% if attendance.working_hours %}
-                                            {{ attendance.working_hours }} hours
+                                        {% if attendance.working_hours_display %}
+                                            {{ attendance.working_hours_display }}
                                         {% else %}
-                                            -
+                                            <span class="text-muted">-</span>
                                         {% endif %}
                                     </td>
                                     <td>
@@ -138,6 +148,8 @@
                                             <span class="badge bg-info">Half Day</span>
                                         {% elif attendance.status == 'absent' %}
                                             <span class="badge bg-danger">Absent</span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -146,7 +158,6 @@
                                     <td colspan="5" class="text-center">No attendance records found.</td>
                                 </tr>
                             {% endfor %}
-
                         </tbody>
                     </table>
                 </div>

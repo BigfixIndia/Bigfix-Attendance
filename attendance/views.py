@@ -2,6 +2,7 @@ from datetime import datetime
 from io import BytesIO
 import json
 import os
+from urllib import request
 from venv import logger
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -32,6 +33,7 @@ from .models import Attendance_Attendance_data, Payroll_Salary
 from django.contrib.admin.views.decorators import staff_member_required
 from datetime import date
 from django.shortcuts import render
+from datetime import timedelta
 
 from .models import  Attendance_Employee_data, Attendance_Attendance_data, QR_Code
 from .forms import UserRegistrationForm, EmployeeRegistrationForm
@@ -127,36 +129,55 @@ def register(request):
         'employee_form': employee_form
     })
 
+def calculate_working_hours(working_hours):
+    if working_hours is None:
+        return "0 hr 0 min"
+    
+    total_minutes = round(working_hours * 60)  # Convert float hours to total minutes
+    hours = total_minutes // 60
+    minutes = total_minutes % 60
+    return f"{hours} hr {minutes} min"
+
 @csrf_exempt
 @login_required
 def dashboard(request):
     if request.method != "GET":
-        return HttpResponseNotAllowed(["GET"])  # Return a 405 response if not GET
-    # Check if the employee profile exists
+        return HttpResponseNotAllowed(["GET"])
+
     if not Attendance_Employee_data.objects.filter(user=request.user).exists():
         messages.error(request, "No employee profile found. Please contact HR.")
-        return redirect('home')  # Redirect to a safe page instead of logout
-    
-    # Get employee object
+        return redirect('home')
+
     employee = get_object_or_404(Attendance_Employee_data, user=request.user)
-    
-    # Get today's date
     today = timezone.now().date()
 
-    # Check today's attendance
-    today_attendance = Attendance_Attendance_data.objects.filter(employee=employee, date=today).first()
-    has_checked_in = today_attendance is not None
-    has_checked_out = today_attendance.check_out_time is not None if today_attendance else False
+    mark_attendance = Attendance_Attendance_data.objects.filter(employee=employee, date=today).first()
+    has_checked_in = mark_attendance is not None and mark_attendance.check_in_time is not None
+    has_checked_out = mark_attendance is not None and mark_attendance.check_out_time is not None
+
+    # Calculate today's working hours (for display)
+    working_hours_display = None
+    if has_checked_in and has_checked_out:
+        time_diff = (mark_attendance.check_out_time - mark_attendance.check_in_time).total_seconds() / 3600
+        working_hours_display = calculate_working_hours(time_diff)
 
     # Get recent attendance records
     recent_attendances = Attendance_Attendance_data.objects.filter(employee=employee).order_by('-date')[:7]
 
-    # Prepare context
+    # Format working hours for each recent attendance
+    for record in recent_attendances:
+        if record.check_in_time and record.check_out_time:
+            diff_hours = (record.check_out_time - record.check_in_time).total_seconds() / 3600
+            record.working_hours_display = calculate_working_hours(diff_hours)
+        else:
+            record.working_hours_display = "0 hr 0 min"
+
     context = {
         'employee': employee,
-        'today_attendance': today_attendance,
+        'mark_attendance': mark_attendance,
         'has_checked_in': has_checked_in,
         'has_checked_out': has_checked_out,
+        'working_hours_display': working_hours_display,
         'recent_attendances': recent_attendances,
     }
 
@@ -177,9 +198,9 @@ def scan_qr_code(request):
 
         # Check if attendance is already marked today
         try:
-            today_attendance = Attendance_Attendance_data.objects.get(employee=employee, date=today)
+            mark_attendance = Attendance_Attendance_data.objects.get(employee=employee, date=today)
             has_checked_in = True
-            has_checked_out = today_attendance.check_out_time is not None
+            has_checked_out = mark_attendance.check_out_time is not None
         except Attendance_Attendance_data.DoesNotExist:
             has_checked_in = False
             has_checked_out = False
