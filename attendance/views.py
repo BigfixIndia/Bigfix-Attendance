@@ -420,11 +420,11 @@ def get_salary_details(request):
     """Fetch employee salary dynamically when button is clicked"""
     from django.http import JsonResponse
     from datetime import date
-    from .models import Attendance_Attendance_data, Payroll_Salary, Employee
+    from .models import Attendance_Attendance_data, Payroll_Salary, Attendance_Employee_data
 
     try:
-        employee = Employee.objects.get(user=request.user)  # Fetch employee instance
-    except Employee.DoesNotExist:
+        employee = Attendance_Employee_data.objects.get(user=request.user)  # Fetch employee instance
+    except Attendance_Employee_data.DoesNotExist:
         return JsonResponse({"error": "No employee record found for this user"}, status=400)
 
     today = date.today()
