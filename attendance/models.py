@@ -41,30 +41,34 @@ class Attendance_Attendance_data(models.Model):
         return f"{self.employee.user.first_name} - {self.date}"
 
     def save(self, *args, **kwargs):
-        if not self.date:
-            self.date = timezone.now().date()
-        
-        if self.check_in_time and self.check_out_time:
-            # Calculate working hours
-            time_diff = self.check_out_time - self.check_in_time
-            hours = time_diff.total_seconds() / 3600
-            self.working_hours = round(hours, 2)
-            
-            # Determine status based on working hours
-            if hours < 4:
-                self.status = 'half_day'
-            elif self.check_in_time.time() > timezone.datetime(2000, 1, 1, 9, 15).time():  # If check-in after 9:15 AM
-                self.status = 'late'
-            else:
-                self.status = 'present'
-            
-            # ✅ Calculate Overtime Hours (Assuming 8 hours is full-time)
-            if self.working_hours > 8:
-                self.overtime_hours = self.working_hours - 8
-            else:
-                self.overtime_hours = 0
+      if not self.date:
+        self.date = timezone.now().date()
 
-        super().save(*args, **kwargs)
+      if self.check_in_time and self.check_out_time:
+        # Calculate working hours
+        time_diff = self.check_out_time - self.check_in_time
+        hours = time_diff.total_seconds() / 3600
+        self.working_hours = round(hours, 2)
+
+        # Check late first (before working hours)
+        checkin_time_only = self.check_in_time.astimezone(timezone.get_current_timezone()).time()
+        late_time = timezone.datetime(2000, 1, 1, 10, 15).time()
+
+        if checkin_time_only > late_time:
+            self.status = 'late'
+        elif hours < 4:
+            self.status = 'half_day'
+        else:
+            self.status = 'present'
+
+        # Overtime
+        if self.working_hours > 8:
+            self.overtime_hours = self.working_hours - 8
+        else:
+            self.overtime_hours = 0
+
+      super().save(*args, **kwargs)
+
 
 class QR_Code(models.Model):
     location = models.CharField(max_length=100, default="Office", unique=True)

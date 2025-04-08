@@ -53,6 +53,18 @@ def admin_dashboard(request):
     }
     return render(request, "admin_dashboard.html", context)
 
+def dashboard_view(request):
+    # Get today's date
+    today = date.today()
+    
+    # Fetch today's attendance for all employees
+    today_attendance = Attendance_Attendance_data.objects.filter(date=today)
+
+    context = {
+        'today_attendance': today_attendance,
+    }
+    return render(request, 'attendance/dashboard_view.html', context)
+
 @staff_member_required
 def fetch_attendance_data(request):
     selected_date = request.GET.get('date', datetime.today().strftime('%Y-%m-%d'))
@@ -260,7 +272,7 @@ def process_qr_scan(request):
         # Send check-in email
         send_mail(
             "Check-In Confirmation",
-            f"Hello {employee.user.username}, you have checked in at {attendance.check_in_time}.",
+            f"Hello {employee.user.username}, you have checked in {attendance.check_in_time}.",
             "admin@yourcompany.com",
             [employee.user.email]
         )
