@@ -1,6 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.conf import settings
 
 class Attendance_Employee_data(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -82,6 +83,37 @@ class QR_Code(models.Model):
 
     def __str__(self):
         return f"QR Code - {self.location}"
+    
+class Announcement(models.Model):
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+    attachment = models.FileField(upload_to='announcements/', null=True, blank=True) 
+
+    class Meta:
+        db_table = "announcements"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.title
+    
+class AnnouncementRead(models.Model):
+    announcement = models.ForeignKey(
+        'Announcement',
+        on_delete=models.CASCADE,
+        to_field='id',
+        db_column='announcement_id',
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+    )
+    read_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('announcement', 'user')
 
     
 class Payroll_Salary(models.Model):

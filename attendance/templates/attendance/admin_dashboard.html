@@ -20,7 +20,67 @@
             <tr><td colspan="3" class="text-center">Select a date to view attendance</td></tr>
         </tbody>
     </table>
+
+    <div class="card mt-4 shadow-sm">
+        <div class="card-header bg-success text-white">
+          <h5 class="mb-0">📢 Post Announcement</h5>
+        </div>
+        <div class="card-body">
+          <form method="POST">
+            {% csrf_token %}
+            <div class="mb-2">
+              <label class="form-label">Title</label>
+              <input type="text" name="title" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Message</label>
+              <textarea name="message" class="form-control" rows="3" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Post</button>
+          </form>
+        </div>
+      </div>
+      
+      <div class="card mt-3 shadow-sm">
+        <div class="card-header bg-secondary text-white">
+          <h6 class="mb-0">Recent Announcements</h6>
+        </div>
+        <ul class="list-group list-group-flush">
+          {% for announcement in announcements %}
+            <li class="list-group-item">
+              <strong>{{ announcement.title }}</strong><br>
+              <small class="text-muted">{{ announcement.created_at|date:"M d, Y h:i A" }}</small><br>
+              <p>{{ announcement.message }}</p>
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+      <a href="{% url 'admin_announcements' %}" class="btn btn-sm btn-info mt-3">Manage All Announcements</a>
+    
+      <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <!-- Title & Message -->
+        <div class="mb-2">
+          <label class="form-label">Title</label>
+          <input type="text" name="title" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Message</label>
+          <textarea name="message" class="form-control" rows="3" required></textarea>
+        </div>
+        <!-- Attachment Field -->
+        <div class="mb-3">
+          <label class="form-label">Attach File (PDF/Image)</label>
+          <input type="file" name="attachment" class="form-control">
+        </div>
+        <button type="submit" class="btn btn-primary">Post</button>
+      </form>
+      {% if announcement.attachment %}
+      <a href="{{ announcement.attachment.url }}" target="_blank" class="btn btn-sm btn-outline-secondary mt-1">📎 View Attachment</a>
+      {% endif %}
+      
 </div>
+
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

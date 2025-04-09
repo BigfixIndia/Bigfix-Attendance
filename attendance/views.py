@@ -37,6 +37,9 @@ from datetime import timedelta
 from datetime import datetime, time, date
 from datetime import timezone
 from django.utils import timezone
+from .models import Announcement
+from .models import AnnouncementRead
+
 
 
 from .models import  Attendance_Employee_data, Attendance_Attendance_data, QR_Code
@@ -50,12 +53,30 @@ def admin_dashboard(request):
     today = datetime.today().strftime('%Y-%m-%d')
     employees = Attendance_Employee_data.objects.all()
     attendance_records = Attendance_Attendance_data.objects.all()
+    announcements = Announcement.objects.all().order_by('-created_at')[:5]
+
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        message = request.POST.get('message')
+        file = request.FILES.get('attachment')  # <-- correct
+
+        if title and message:
+            Announcement.objects.create(
+                title=title,
+                message=message,
+                created_by=request.user,
+                attachment=file  # <-- file will be saved now
+            )
+            return redirect('admin_dashboard')
+
     context = {
         "employees": employees,
         "attendance_records": attendance_records,
-        "today": today
+        "today": today,
+        "announcements": announcements
     }
     return render(request, "admin_dashboard.html", context)
+
 
 def dashboard_view(request):
     today = date.today()
@@ -218,7 +239,7 @@ def dashboard(request):
     has_checked_in = mark_attendance is not None and mark_attendance.check_in_time is not None
     has_checked_out = mark_attendance is not None and mark_attendance.check_out_time is not None
 
-    # Calculate today's working hours (for display)
+    # Calculate today's working hours
     working_hours_display = None
     if has_checked_in and has_checked_out:
         time_diff = (mark_attendance.check_out_time - mark_attendance.check_in_time).total_seconds() / 3600
@@ -226,14 +247,31 @@ def dashboard(request):
 
     # Get recent attendance records
     recent_attendances = Attendance_Attendance_data.objects.filter(employee=employee).order_by('-date')[:7]
-
-    # Format working hours for each recent attendance
     for record in recent_attendances:
         if record.check_in_time and record.check_out_time:
             diff_hours = (record.check_out_time - record.check_in_time).total_seconds() / 3600
             record.working_hours_display = calculate_working_hours(diff_hours)
         else:
             record.working_hours_display = "0 hr 0 min"
+
+    # 🔔 Get recent active announcements
+    announcements = Announcement.objects.filter(is_active=True).order_by('-created_at')[:5]
+    read_announcements = AnnouncementRead.objects.filter(user=request.user).values_list('announcement_id', flat=True)
+
+    # Attach a 'is_read' property to each announcement
+    for announcement in announcements:
+        announcement.is_read = announcement.id in read_announcements
+
+    # 📌 Track unread announcements
+    unread_announcements = [
+       ann for ann in announcements
+       if not AnnouncementRead.objects.filter(user=request.user, announcement=ann).exists()
+    ]
+
+     # ✅ Mark unread ones as read
+    for ann in unread_announcements:
+        AnnouncementRead.objects.create(user=request.user, announcement=ann)
+
 
     context = {
         'employee': employee,
@@ -242,9 +280,12 @@ def dashboard(request):
         'has_checked_out': has_checked_out,
         'working_hours_display': working_hours_display,
         'recent_attendances': recent_attendances,
+        'announcements': announcements,  # 👈 add to context
+        'unread_count': len(unread_announcements),
     }
 
     return render(request, 'attendance/dashboard.html', context)
+
 
 @login_required
 @require_http_methods(["GET"])

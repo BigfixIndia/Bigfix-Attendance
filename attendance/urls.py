@@ -23,6 +23,9 @@ urlpatterns = [
     path("employee_dashboard/", views.employee_dashboard, name="employee_dashboard"),
     path('dashboard_view/', views.dashboard_view, name='dashboard_view'),
     path("get-salary-details/", views.get_salary_details, name="get_salary_details"),  # New API endpoint
+    path('dashboard/', views.employee_dashboard, name='employee_dashboard'),
+    path('admin/announcements/', views.admin_dashboard, name='admin_announcements'),
+
     #path("admin/download-salary-slip/<int:salary_id>/", views.download_salary_slip, name="download_salary_slip"),
     #path('logout/', views.logout, name='logout'),
 
