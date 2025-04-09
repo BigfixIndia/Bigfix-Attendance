@@ -34,6 +34,10 @@ from django.contrib.admin.views.decorators import staff_member_required
 from datetime import date
 from django.shortcuts import render
 from datetime import timedelta
+from datetime import datetime, time, date
+from datetime import timezone
+from django.utils import timezone
+
 
 from .models import  Attendance_Employee_data, Attendance_Attendance_data, QR_Code
 from .forms import UserRegistrationForm, EmployeeRegistrationForm
@@ -54,16 +58,63 @@ def admin_dashboard(request):
     return render(request, "admin_dashboard.html", context)
 
 def dashboard_view(request):
-    # Get today's date
     today = date.today()
-    
-    # Fetch today's attendance for all employees
-    today_attendance = Attendance_Attendance_data.objects.filter(date=today)
+    status_list = []
 
-    context = {
-        'today_attendance': today_attendance,
-    }
-    return render(request, 'attendance/dashboard_view.html', context)
+    # Get all registered employees
+    all_employees = Attendance_Employee_data.objects.filter(user__isnull=False)
+
+    for employee in all_employees:
+        user = employee.user
+        record = Attendance_Attendance_data.objects.filter(employee=employee, date=today).first()
+
+        if record:
+            # Convert times to IST
+            check_in_ist = timezone.localtime(record.check_in_time) if record.check_in_time else None
+            check_out_ist = timezone.localtime(record.check_out_time) if record.check_out_time else None
+
+            if check_in_ist:
+                login_time = check_in_ist.time()
+                if login_time > time(10, 30):  # Late check-in → Red
+                    status = {
+                        "name": f"{user.first_name} {user.last_name}",
+                        "status": f"Login @ {check_in_ist.strftime('%I:%M %p')}",
+                        "color": "red"
+                    }
+                else:  # On-time login → Green
+                    status = {
+                        "name": f"{user.first_name} {user.last_name}",
+                        "status": f"Login @ {check_in_ist.strftime('%I:%M %p')}",
+                        "color": "green"
+                    }
+            elif check_out_ist:
+                # Only logout → Orange
+                status = {
+                    "name": f"{user.first_name} {user.last_name}",
+                    "status": f"Logout @ {check_out_ist.strftime('%I:%M %p')}",
+                    "color": "orange"
+                }
+            else:
+                # Record exists but no login/logout time → Blue
+                status = {
+                    "name": f"{user.first_name} {user.last_name}",
+                    "status": "Leave",
+                    "color": "blue"
+                }
+        else:
+            # No record today → Blue
+            status = {
+                "name": f"{user.first_name} {user.last_name}",
+                "status": "Leave",
+                "color": "blue"
+            }
+
+        status_list.append(status)
+
+    return render(request, 'attendance/dashboard_view.html', {
+        "today": today,
+        "status_list": status_list
+    })
 
 @staff_member_required
 def fetch_attendance_data(request):

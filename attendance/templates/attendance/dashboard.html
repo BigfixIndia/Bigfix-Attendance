@@ -49,7 +49,7 @@
             {% if has_checked_in %}
                 <div class="alert alert-success">
                     <i class="fas fa-check-circle me-2"></i>
-                    You have checked in at {{ today_attendance.check_in_time|time:"h:i A" }}
+                    You have checked in{{ today_attendance.check_in_time|time:"h:i A" }}
                 </div>
 
                 {% if has_checked_out %}
