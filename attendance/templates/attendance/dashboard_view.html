@@ -2,32 +2,48 @@
 
 {% block content %}
 <div class="container mt-5">
-    <h2 class="mt-4 mb-3 fw-bold">📊  Workday Tracker - {{ today }}</h2>
+    <h2 class="fw-bold mb-4">📊 Workday Tracker - {{ today }}</h2>
 
-    <div class="legend-container mb-4 p-3 border rounded shadow-sm bg-light">
-        <h5 class="mb-2">🗂️ Attendance Status Key</h5>
-        <div class="d-flex flex-wrap gap-3">
-          <span class="badge rounded-pill text-bg-success px-3 py-2">🟢 Login In</span>
-          <span class="badge rounded-pill text-bg-danger px-3 py-2">🔴 Late Login (After 10:30 AM)</span>
-          <span class="badge rounded-pill text-bg-primary px-3 py-2">🔵 Leave</span>
-          <span class="badge rounded-pill text-bg-warning text-dark px-3 py-2">🟠 Logged Out</span>
+    <!-- Employee Cards -->
+    <div class="row">
+        {% for item in status_list %}
+        <div class="col-md-4 mb-4">
+            <div class="card border-primary shadow-lg">
+                <div class="card-body">
+                    <h5 class="card-title fw-semibold text-primary">{{ item.name }}</h5>
+                    <hr>
+                    <p class="mb-1"><strong>🕘 Check-in:</strong> {{ item.check_in|default:"--" }}</p>
+                    <p class="mb-0"><strong>🕔 Check-out:</strong> {{ item.check_out|default:"--" }}</p>
+                </div>
+            </div>
         </div>
-      </div>
-
-<div class="container">
-  <div class="row">
-    {% for item in status_list %}
-      <div class="col-md-4 mb-4">
-        <div class="card shadow p-3">
-          <h5 class="card-title">{{ item.name }}</h5>
-          <p class="card-text">
-            <span class="badge" style="background-color: {{ item.color }}; color: white;">
-              {{ item.status }}
-            </span>
-          </p>
-        </div>
-      </div>
         {% endfor %}
+    </div>
+
+    <!-- HR Card -->
+    <div class="card mt-5 shadow-sm border-info">
+        <div class="card-body">
+            <h4 class="card-title text-info fw-bold mb-3">📋 HR Attendance Overview</h4>
+            <p><strong>✅ Present Today:</strong> {{ present_count }}</p>
+
+            {% if leave_list %}
+                <p class="mt-3 fw-semibold">🟦 On Leave:</p>
+                <ul class="list-group mb-3">
+                    {% for emp in leave_list %}
+                    <li class="list-group-item">{{ emp.employee__name }} - Leave</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+
+            {% if absent_list %}
+                <p class="mt-3 fw-semibold">❌ Absent:</p>
+                <ul class="list-group">
+                    {% for emp in absent_list %}
+                    <li class="list-group-item">{{ emp.name }} - Absent</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
     </div>
 </div>
 {% endblock %}

@@ -1,7 +1,9 @@
+import datetime
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.conf import settings
+from datetime import date
 
 class Attendance_Employee_data(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
@@ -36,7 +38,7 @@ class Attendance_Attendance_data(models.Model):
 
     class Meta:
         db_table = "attendance_attendance_data"
-        unique_together = ['employee', 'date']
+        #unique_together = ['employee', 'date']
 
     def __str__(self):
         return f"{self.employee.user.first_name} - {self.date}"
@@ -90,7 +92,8 @@ class Announcement(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
-    attachment = models.FileField(upload_to='announcements/', null=True, blank=True) 
+    attachment = models.FileField(upload_to='attachments/', null=True, blank=True)
+
 
     class Meta:
         db_table = "announcements"
@@ -114,6 +117,43 @@ class AnnouncementRead(models.Model):
 
     class Meta:
         unique_together = ('announcement', 'user')
+
+class  Attendance_LeaveRequest(models.Model):
+    LEAVE_TYPES = [
+        ('sick', 'Sick Leave'),
+        ('casual', 'Casual Leave'),
+        ('emergency', 'Emergency Leave'),
+        ('other', 'Other'),
+    ]
+    employee = models.ForeignKey(Attendance_Employee_data, on_delete=models.CASCADE)
+    from_date = models.DateField(default=date.today, null=False)
+    to_date = models.DateField(default=date.today,null=False)
+    leave_type = models.CharField(max_length=20, choices=LEAVE_TYPES, default='sick')  # Add default here
+    message = models.TextField(blank=True, null=True)
+    is_approved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "attendance_leave_request"
+        unique_together = ['employee', 'from_date']
+
+    def __str__(self):
+        return f"Leave from {self.from_date} to {self.to_date} by {self.employee.user.username}"
+
+class Attendance_Log(models.Model):
+    employee = models.ForeignKey(Attendance_Employee_data, on_delete=models.CASCADE)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    ACTION_CHOICES = (
+        ('IN', 'Check In'),
+        ('OUT', 'Check Out'),
+    )
+    action = models.CharField(max_length=3, choices=ACTION_CHOICES)
+
+    class Meta:
+        db_table = "attendance_log"
+
+    def __str__(self):
+        return f"{self.employee} - {self.action} at {self.timestamp}"
 
     
 class Payroll_Salary(models.Model):

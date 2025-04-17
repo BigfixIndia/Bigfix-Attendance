@@ -35,10 +35,15 @@ from datetime import date
 from django.shortcuts import render
 from datetime import timedelta
 from datetime import datetime, time, date
+from datetime import date, time
 from datetime import timezone
 from django.utils import timezone
 from .models import Announcement
 from .models import AnnouncementRead
+from .forms import LeaveRequestForm
+from .models import Attendance_LeaveRequest
+from .models import Attendance_Log
+from datetime import date
 
 
 
@@ -88,53 +93,58 @@ def dashboard_view(request):
     for employee in all_employees:
         user = employee.user
         record = Attendance_Attendance_data.objects.filter(employee=employee, date=today).first()
+        leave = Attendance_LeaveRequest.objects.filter(
+            employee=employee,
+            from_date__lte=today,
+            to_date__gte=today,
+            is_approved=True
+        ).first()
 
-        if record:
-            # Convert times to IST
+        status = {
+            "name": f"{user.first_name} {user.last_name}",
+            "check_in": None,
+            "check_out": None,
+            "color": ""
+        }
+
+        if leave:
+            status["check_in"] = "Leave"
+            status["check_out"] = "Leave"
+            status["color"] = "blue"
+
+        elif record:
             check_in_ist = timezone.localtime(record.check_in_time) if record.check_in_time else None
             check_out_ist = timezone.localtime(record.check_out_time) if record.check_out_time else None
 
             if check_in_ist:
-                login_time = check_in_ist.time()
-                if login_time > time(10, 30):  # Late check-in → Red
-                    status = {
-                        "name": f"{user.first_name} {user.last_name}",
-                        "status": f"Login @ {check_in_ist.strftime('%I:%M %p')}",
-                        "color": "red"
-                    }
-                else:  # On-time login → Green
-                    status = {
-                        "name": f"{user.first_name} {user.last_name}",
-                        "status": f"Login @ {check_in_ist.strftime('%I:%M %p')}",
-                        "color": "green"
-                    }
-            elif check_out_ist:
-                # Only logout → Orange
-                status = {
-                    "name": f"{user.first_name} {user.last_name}",
-                    "status": f"Logout @ {check_out_ist.strftime('%I:%M %p')}",
-                    "color": "orange"
-                }
-            else:
-                # Record exists but no login/logout time → Blue
-                status = {
-                    "name": f"{user.first_name} {user.last_name}",
-                    "status": "Leave",
-                    "color": "blue"
-                }
+                status["check_in"] = check_in_ist.strftime('%I:%M %p')
+                if check_in_ist.time() > time(10, 30):
+                    status["color"] = "red"  # Late login
+
+            if check_out_ist:
+                status["check_out"] = check_out_ist.strftime('%I:%M %p')
+                if not check_in_ist:
+                    status["color"] = "orange"  # Only logged out without check-in
+
         else:
-            # No record today → Blue
-            status = {
-                "name": f"{user.first_name} {user.last_name}",
-                "status": "Leave",
-                "color": "blue"
-            }
+            # No record & no approved leave → Absent
+            status["check_in"] = "Absent"
+            status["check_out"] = "Absent"
+            status["color"] = "red"
 
         status_list.append(status)
 
+    # HR analysis data for superusers
+    present_count = len([s for s in status_list if s['check_in'] not in [None, 'Absent', 'Leave']])
+    leave_list = [s for s in status_list if s['check_in'] == 'Leave']
+    absent_list = [s for s in status_list if s['check_in'] == 'Absent']
+
     return render(request, 'attendance/dashboard_view.html', {
         "today": today,
-        "status_list": status_list
+        "status_list": status_list,
+        "present_count": present_count,
+        "leave_list": leave_list,
+        "absent_list": absent_list
     })
 
 @staff_member_required
@@ -225,27 +235,40 @@ def calculate_working_hours(working_hours):
 @csrf_exempt
 @login_required
 def dashboard(request):
-    if request.method != "GET":
-        return HttpResponseNotAllowed(["GET"])
-
-    if not Attendance_Employee_data.objects.filter(user=request.user).exists():
-        messages.error(request, "No employee profile found. Please contact HR.")
-        return redirect('home')
+    
+    today = timezone.now().date()  # ✅ Define 'today' BEFORE using it below
 
     employee = get_object_or_404(Attendance_Employee_data, user=request.user)
-    today = timezone.now().date()
+    
+    today_logs = Attendance_Log.objects.filter(
+        employee=employee,
+        timestamp__date=today
+    ).order_by('timestamp')
 
     mark_attendance = Attendance_Attendance_data.objects.filter(employee=employee, date=today).first()
     has_checked_in = mark_attendance is not None and mark_attendance.check_in_time is not None
     has_checked_out = mark_attendance is not None and mark_attendance.check_out_time is not None
 
-    # Calculate today's working hours
+    # ➕ Add leave request form
+    leave_form = LeaveRequestForm()
+    existing_leave = Attendance_LeaveRequest.objects.filter(employee=employee).first()
+
+    if request.method == 'POST' and 'leave_request' in request.POST:
+        leave_form = LeaveRequestForm(request.POST)
+        if leave_form.is_valid():
+            leave = leave_form.save(commit=False)
+            leave.employee = employee
+            leave.save()
+            messages.success(request, 'Leave request submitted successfully!')
+            return redirect('dashboard')
+
+    # Calculate working hours
     working_hours_display = None
     if has_checked_in and has_checked_out:
         time_diff = (mark_attendance.check_out_time - mark_attendance.check_in_time).total_seconds() / 3600
         working_hours_display = calculate_working_hours(time_diff)
 
-    # Get recent attendance records
+    # Recent attendance
     recent_attendances = Attendance_Attendance_data.objects.filter(employee=employee).order_by('-date')[:7]
     for record in recent_attendances:
         if record.check_in_time and record.check_out_time:
@@ -254,24 +277,15 @@ def dashboard(request):
         else:
             record.working_hours_display = "0 hr 0 min"
 
-    # 🔔 Get recent active announcements
+    # Announcements
     announcements = Announcement.objects.filter(is_active=True).order_by('-created_at')[:5]
     read_announcements = AnnouncementRead.objects.filter(user=request.user).values_list('announcement_id', flat=True)
+    for ann in announcements:
+        ann.is_read = ann.id in read_announcements
 
-    # Attach a 'is_read' property to each announcement
-    for announcement in announcements:
-        announcement.is_read = announcement.id in read_announcements
-
-    # 📌 Track unread announcements
-    unread_announcements = [
-       ann for ann in announcements
-       if not AnnouncementRead.objects.filter(user=request.user, announcement=ann).exists()
-    ]
-
-     # ✅ Mark unread ones as read
+    unread_announcements = [ann for ann in announcements if not ann.is_read]
     for ann in unread_announcements:
         AnnouncementRead.objects.create(user=request.user, announcement=ann)
-
 
     context = {
         'employee': employee,
@@ -280,8 +294,11 @@ def dashboard(request):
         'has_checked_out': has_checked_out,
         'working_hours_display': working_hours_display,
         'recent_attendances': recent_attendances,
-        'announcements': announcements,  # 👈 add to context
+        'announcements': announcements,
         'unread_count': len(unread_announcements),
+        'leave_form': leave_form,
+        'existing_leave': existing_leave,
+        'today_logs': today_logs,
     }
 
     return render(request, 'attendance/dashboard.html', context)
@@ -377,9 +394,6 @@ def process_qr_scan(request):
 @csrf_exempt
 @login_required
 def mark_attendance(request):
-    """
-    API to mark employee attendance when QR code is scanned and send email confirmation.
-    """
     if request.method == "POST":
         try:
             employee = get_object_or_404(Attendance_Employee_data, user=request.user)
@@ -387,20 +401,18 @@ def mark_attendance(request):
             data = request.POST if request.POST else request.json()
             scanned_qr = data.get("qr_data")
 
-            # Get the correct office QR code
             expected_qr_code = f"attendance/{employee.id}/{today}"
-
             if scanned_qr != expected_qr_code:
                 return JsonResponse({"error": "Invalid QR Code!"}, status=400)
 
-            # Get or create attendance record
             attendance, created = Attendance_Attendance_data.objects.get_or_create(
                 employee=employee, date=today,
                 defaults={"check_in_time": timezone.now()}
             )
 
             if created:
-                # ✅ Check-in
+                # ✅ First-time check-in
+                Attendance_Log.objects.create(employee=employee, action='IN')
                 send_attendance_email(employee.user.email, "Check-In", attendance.check_in_time)
                 return JsonResponse({"message": "Check-in successful!"})
 
@@ -408,6 +420,7 @@ def mark_attendance(request):
                 # ✅ Check-out
                 attendance.check_out_time = timezone.now()
                 attendance.save()
+                Attendance_Log.objects.create(employee=employee, action='OUT')
                 send_attendance_email(employee.user.email, "Check-Out", attendance.check_out_time)
                 return JsonResponse({"message": "Check-out successful!"})
 
