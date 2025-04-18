@@ -87,8 +87,10 @@ def admin_dashboard(request):
 def dashboard_view(request):
     today = date.today()
     status_list = []
+    present_employees = []
+    leave_list = []
+    absent_list = []
 
-    # Get all registered employees
     all_employees = Attendance_Employee_data.objects.filter(user__isnull=False)
 
     for employee in all_employees:
@@ -105,48 +107,49 @@ def dashboard_view(request):
             "name": f"{user.first_name} {user.last_name}",
             "check_in": None,
             "check_out": None,
-            "color": ""
+            "color": "",
+            "check_in_raw": None  # only used for sorting
         }
 
         if leave:
-            status["check_in"] = "Leave"
-            status["check_out"] = "Leave"
-            status["color"] = "blue"
+            leave_list.append({
+                "employee__name": status["name"]
+            })
 
-        elif record:
-            check_in_ist = timezone.localtime(record.check_in_time) if record.check_in_time else None
-            check_out_ist = timezone.localtime(record.check_out_time) if record.check_out_time else None
+        elif record and record.check_in_time:
+            check_in_ist = timezone.localtime(record.check_in_time)
+            status["check_in"] = check_in_ist.strftime('%I:%M %p')
+            status["check_in_raw"] = check_in_ist
 
-            if check_in_ist:
-                status["check_in"] = check_in_ist.strftime('%I:%M %p')
-                if check_in_ist.time() > time(10, 30):
-                    status["color"] = "red"  # Late login
-
-            if check_out_ist:
+            if record.check_out_time:
+                check_out_ist = timezone.localtime(record.check_out_time)
                 status["check_out"] = check_out_ist.strftime('%I:%M %p')
-                if not check_in_ist:
-                    status["color"] = "orange"  # Only logged out without check-in
+
+            if check_in_ist.time() > time(10, 30):
+                status["color"] = "red"
+
+            present_employees.append(status)
 
         else:
-            # No record & no approved leave → Absent
-            status["check_in"] = "Absent"
-            status["check_out"] = "Absent"
-            status["color"] = "red"
+            absent_list.append({
+                "name": status["name"]
+            })
 
-        status_list.append(status)
+    # 🔃 Sort the present_employees by check_in_raw without lambda
+    from operator import itemgetter
+    present_employees.sort(key=itemgetter('check_in_raw'))
 
-    # HR analysis data for superusers
-    present_count = len([s for s in status_list if s['check_in'] not in [None, 'Absent', 'Leave']])
-    leave_list = [s for s in status_list if s['check_in'] == 'Leave']
-    absent_list = [s for s in status_list if s['check_in'] == 'Absent']
+    # Update only the display status_list with present employees (not absentees or leave)
+    status_list = present_employees
 
     return render(request, 'attendance/dashboard_view.html', {
         "today": today,
         "status_list": status_list,
-        "present_count": present_count,
+        "present_count": len(present_employees),
         "leave_list": leave_list,
         "absent_list": absent_list
     })
+
 
 @staff_member_required
 def fetch_attendance_data(request):
