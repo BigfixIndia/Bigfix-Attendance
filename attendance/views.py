@@ -44,6 +44,7 @@ from .forms import LeaveRequestForm
 from .models import Attendance_LeaveRequest
 from .models import Attendance_Log
 from datetime import date
+from django.utils.timezone import localtime
 
 
 

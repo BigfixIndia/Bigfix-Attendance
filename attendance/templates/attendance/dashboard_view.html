@@ -2,35 +2,51 @@
 
 {% block content %}
 <div class="container mt-5">
-    <h2 class="fw-bold mb-4">📊 Workday Tracker - {{ today }}</h2>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold text-dark">📊 Workday Tracker - <span class="text-primary">{{ today }}</span></h2>
+        <span class="badge bg-info fs-6 p-2">Employees Tracked: {{ present_count }}</span>
+    </div>
 
     <!-- Employee Cards -->
     <div class="row">
-        {% for item in status_list %}
-        <div class="col-md-4 mb-4">
-            <div class="card border-primary shadow-lg">
-                <div class="card-body">
-                    <h5 class="card-title fw-semibold text-primary">{{ item.name }}</h5>
-                    <hr>
-                    <p class="mb-1"><strong>🕘 Check-in:</strong> {{ item.check_in|default:"--" }}</p>
-                    <p class="mb-0"><strong>🕔 Check-out:</strong> {{ item.check_out|default:"--" }}</p>
+        {% if status_list %}
+            {% for item in status_list %}
+            <div class="col-md-4 mb-4">
+                <div class="card shadow-lg border-0">
+                    <div class="card-header bg-primary text-white fw-semibold">
+                        <i class="bi bi-person-check-fill me-2"></i>{{ item.name }}
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-2"><i class="bi bi-clock me-2 text-success"></i><strong>Check-in:</strong> <span class="text-dark">{{ item.check_in }}</span></p>
+                        {% if item.check_out %}
+                        <p class="mb-0"><i class="bi bi-box-arrow-right me-2 text-danger"></i><strong>Check-out:</strong> <span class="text-dark">{{ item.check_out }}</span></p>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
-        </div>
-        {% endfor %}
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="alert alert-warning text-center fs-5 shadow-sm">
+                    🚫 <strong>No one has checked in yet.</strong>
+                </div>
+            </div>
+        {% endif %}
     </div>
 
     <!-- HR Card -->
     <div class="card mt-5 shadow-sm border-info">
+        <div class="card-header bg-info text-white fw-bold fs-5">
+            📋 HR Attendance Overview
+        </div>
         <div class="card-body">
-            <h4 class="card-title text-info fw-bold mb-3">📋 HR Attendance Overview</h4>
-            <p><strong>✅ Present Today:</strong> {{ present_count }}</p>
+            <p><strong>✅ Present Today:</strong> <span class="text-success">{{ present_count }}</span></p>
 
             {% if leave_list %}
                 <p class="mt-3 fw-semibold">🟦 On Leave:</p>
                 <ul class="list-group mb-3">
-                    {% for emp in leave_list %}
-                    <li class="list-group-item">{{ emp.employee__name }} - Leave</li>
+                    {% for employee in leave_list %}
+                    <li class="list-group-item"><i class="bi bi-airplane-fill text-info me-2"></i>{{ employee.name }} - Leave</li>
                     {% endfor %}
                 </ul>
             {% endif %}
@@ -38,8 +54,8 @@
             {% if absent_list %}
                 <p class="mt-3 fw-semibold">❌ Absent:</p>
                 <ul class="list-group">
-                    {% for emp in absent_list %}
-                    <li class="list-group-item">{{ emp.name }} - Absent</li>
+                    {% for employee in absent_list %}
+                    <li class="list-group-item"><i class="bi bi-person-x-fill text-danger me-2"></i>{{ employee.name }} - Absent</li>
                     {% endfor %}
                 </ul>
             {% endif %}
