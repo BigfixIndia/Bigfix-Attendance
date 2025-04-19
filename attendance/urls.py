@@ -22,9 +22,11 @@ urlpatterns = [
     path("payroll/admin/", views.admin_payroll_view, name="admin_payroll"),
     path("employee_dashboard/", views.employee_dashboard, name="employee_dashboard"),
     path('dashboard_view/', views.dashboard_view, name='dashboard_view'),
-    path("get-salary-details/", views.get_salary_details, name="get_salary_details"),  # New API endpoint
+    path("get_salary_details/", views.get_salary_details, name="get_salary_details"),  # New API endpoint
     path('dashboard/', views.employee_dashboard, name='employee_dashboard'),
     path('admin/announcements/', views.admin_dashboard, name='admin_announcements'),
+    path('leave_request_view/', views.leave_request_view, name='leave_request_view'),
+    path('calendar_page/', views.calendar_page, name='calendar_page'),
 
     #path("admin/download-salary-slip/<int:salary_id>/", views.download_salary_slip, name="download_salary_slip"),
     #path('logout/', views.logout, name='logout'),

@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'corsheaders',
     'qr_code',
+    'widget_tweaks'
    
 ]
 

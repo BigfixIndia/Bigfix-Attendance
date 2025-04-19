@@ -49,13 +49,13 @@
             {% if has_checked_in %}
                 <div class="alert alert-success">
                     <i class="fas fa-check-circle me-2"></i>
-                    You have checked in{{ today_attendance.check_in_time|time:"h:i A" }}
+                    You have checked in {{ today_attendance.check_in_time|time:"h:i A" }}
                 </div>
 
                 {% if has_checked_out %}
                     <div class="alert alert-info">
                         <i class="fas fa-sign-out-alt me-2"></i>
-                        You have checked out at {{ today_attendance.check_out_time|time:"h:i A" }}<br>
+                        You have checked out  {{ today_attendance.check_out_time|time:"h:i A" }}
                         <strong>Total working hours:</strong> <p>Working Hours: {{ working_hours_display }}
                     </div>
                 {% else %}
@@ -109,7 +109,7 @@
           {% endif %}
         </div>
       </div>
-
+{% comment %}
       <!-- Leave Request Button -->
 <button class="btn btn-outline-primary mt-3" data-bs-toggle="modal" data-bs-target="#leaveRequestModal">
     <i class="fas fa-calendar-plus me-2"></i>Request Leave
@@ -155,7 +155,7 @@
       </div>
     </div>
   </div>
-     
+ 
 
         <!-- View salary-->
         <div class="card mt-4">
@@ -173,7 +173,7 @@
                 </div>
             </div>
         </div>
-        
+        {% endcomment %}      
         <!-- Recent Attendance Card -->
         <div class="card mt-4">
             <div class="card-header">
@@ -241,6 +241,7 @@
             </div>
         </div>
 
+{% comment %}
         <!-- Today's IN/OUT Logs -->
 <div class="card mt-4">
     <div class="card-header">
@@ -277,6 +278,7 @@
         {% endif %}
     </div>
 </div>
+{% endcomment %}
     </div>
 </div>
 {% endblock %}

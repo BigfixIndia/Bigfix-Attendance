@@ -184,3 +184,13 @@ class Payroll_Payments(models.Model):
 
     def __str__(self):
         return f"{self.employee.user.first_name} - Payroll {self.month}/{self.year}"
+    
+class Holiday(models.Model):
+    title = models.CharField(max_length=100)
+    date = models.DateField()
+
+    class Meta:
+        db_table = "Holiday"
+
+    def __str__(self):
+        return f"{self.title} - {self.date}"

@@ -32,5 +32,5 @@ class LeaveRequestForm(forms.ModelForm):
         widgets = {
             'from_date': forms.SelectDateWidget(),
             'to_date': forms.SelectDateWidget(),
-            'message': forms.Textarea(attrs={'rows': 2}),
+            'message': forms.Textarea(attrs={'rows': 3}),
         }

@@ -9,7 +9,7 @@
 
 <script>
 document.getElementById("viewSalaryBtn").addEventListener("click", function() {
-    fetch("/get-salary-details/")
+    fetch("/get_salary_details/")
         .then(response => response.json())
         .then(data => {
             document.getElementById("presentDays").innerText = data.present_days;

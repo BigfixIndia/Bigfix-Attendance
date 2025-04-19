@@ -45,6 +45,7 @@ from .models import Attendance_LeaveRequest
 from .models import Attendance_Log
 from datetime import date
 from django.utils.timezone import localtime
+from .models import Holiday
 
 
 
@@ -91,10 +92,28 @@ def dashboard_view(request):
     leave_list = []
     absent_list = []
 
+    user = request.user
+    current_employee = Attendance_Employee_data.objects.get(user=user)
+
+    # Get today's attendance for the current user
+    today_attendance = Attendance_Attendance_data.objects.filter(employee=current_employee, date=today).first()
+
+    has_checked_in = today_attendance is not None and today_attendance.check_in_time is not None
+    has_checked_out = today_attendance is not None and today_attendance.check_out_time is not None
+    working_hours_display = None
+
+    if has_checked_in and has_checked_out:
+        time_diff = today_attendance.check_out_time - today_attendance.check_in_time
+        # Optional: format into HH:MM format
+        total_seconds = time_diff.total_seconds()
+        hours = int(total_seconds // 3600)
+        minutes = int((total_seconds % 3600) // 60)
+        working_hours_display = f"{hours:02d}:{minutes:02d}"
+
     all_employees = Attendance_Employee_data.objects.filter(user__isnull=False)
 
     for employee in all_employees:
-        user = employee.user
+        user_obj = employee.user
         record = Attendance_Attendance_data.objects.filter(employee=employee, date=today).first()
         leave = Attendance_LeaveRequest.objects.filter(
             employee=employee,
@@ -104,18 +123,17 @@ def dashboard_view(request):
         ).first()
 
         status = {
-            "name": f"{user.first_name} {user.last_name}",
+            "name": f"{user_obj.first_name} {user_obj.last_name}",
             "check_in": None,
             "check_out": None,
             "color": "",
-            "check_in_raw": None  # only used for sorting
+            "check_in_raw": None
         }
 
         if leave:
             leave_list.append({
                 "employee__name": status["name"]
             })
-
         elif record and record.check_in_time:
             check_in_ist = timezone.localtime(record.check_in_time)
             status["check_in"] = check_in_ist.strftime('%I:%M %p')
@@ -129,17 +147,13 @@ def dashboard_view(request):
                 status["color"] = "red"
 
             present_employees.append(status)
-
         else:
             absent_list.append({
                 "name": status["name"]
             })
 
-    # 🔃 Sort the present_employees by check_in_raw without lambda
     from operator import itemgetter
     present_employees.sort(key=itemgetter('check_in_raw'))
-
-    # Update only the display status_list with present employees (not absentees or leave)
     status_list = present_employees
 
     return render(request, 'attendance/dashboard_view.html', {
@@ -147,7 +161,11 @@ def dashboard_view(request):
         "status_list": status_list,
         "present_count": len(present_employees),
         "leave_list": leave_list,
-        "absent_list": absent_list
+        "absent_list": absent_list,
+        "today_attendance": today_attendance,
+        "has_checked_in": has_checked_in,
+        "has_checked_out": has_checked_out,
+        "working_hours_display": working_hours_display
     })
 
 
@@ -306,6 +324,18 @@ def dashboard(request):
     }
 
     return render(request, 'attendance/dashboard.html', context)
+
+@login_required
+def leave_request_view(request):
+    leave_form = LeaveRequestForm()
+    if request.method == 'POST' and 'leave_request' in request.POST:
+        leave_form = LeaveRequestForm(request.POST)
+        if leave_form.is_valid():
+            leave = leave_form.save(commit=False)
+            leave.user = request.user
+            leave.save()
+            return redirect('dashboard')  # or wherever you want to redirect
+    return render(request, 'attendance/leave_request.html', {'leave_form': leave_form})
 
 
 @login_required
@@ -559,15 +589,12 @@ def employee_dashboard(request):
 
 @login_required
 def get_salary_details(request):
-    """Fetch employee salary dynamically when button is clicked"""
-    from django.http import JsonResponse
-    from datetime import date
-    from .models import Attendance_Attendance_data, Payroll_Salary, Attendance_Employee_data
-
     try:
-        employee = Attendance_Employee_data.objects.get(user=request.user)  # Fetch employee instance
+        employee = Attendance_Employee_data.objects.get(user=request.user)
     except Attendance_Employee_data.DoesNotExist:
-        return JsonResponse({"error": "No employee record found for this user"}, status=400)
+        return render(request, "salarydetails.html", {
+            "error": "No employee record found for this user"
+        })
 
     today = date.today()
     start_of_month = today.replace(day=1)
@@ -579,13 +606,49 @@ def get_salary_details(request):
 
     salary_data = Payroll_Salary.objects.filter(employee=employee).first()
     if salary_data:
-        per_day_salary = salary_data.base_salary / 26  
+        per_day_salary = salary_data.base_salary / 26
         total_salary = round(present_days * per_day_salary, 2)
     else:
         total_salary = 0
 
-    return JsonResponse({"present_days": present_days, "total_salary": total_salary})
+    context = {
+        "present_days": present_days,
+        "total_salary": total_salary,
+        "base_salary": salary_data.base_salary if salary_data else 0,
+        "employee": employee
+    }
 
+    return render(request, "attendance/salarydetails.html", context)
+
+@login_required
+def calendar_page(request):
+    # Fetch all events (Holidays and Workdays) here and pass them to the template
+    employee = Attendance_Employee_data.objects.get(user=request.user)
+    events = []
+
+    # Holidays
+    for holiday in Holiday.objects.all():
+        events.append({
+            'title': holiday.title,
+            'start': str(holiday.date),
+            'color': '#dc3545'  # Red for Holidays
+        })
+
+    # Workdays (if needed)
+    workdays = Attendance_Attendance_data.objects.filter(employee=employee, status='Present')
+    for day in workdays:
+        events.append({
+            'title': 'Work Day',
+            'start': str(day.date),
+            'color': '#198754'  # Green for Workdays
+        })
+
+    # Pass events to the calendar page template
+    context = {
+        'events': events
+    }
+
+    return render(request, 'attendance/calendar.html', context)
 
 def logout(request):
     request.session.flush()
