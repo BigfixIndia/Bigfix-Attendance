@@ -55,7 +55,7 @@ class Attendance_Attendance_data(models.Model):
 
         # Check late first (before working hours)
         checkin_time_only = self.check_in_time.astimezone(timezone.get_current_timezone()).time()
-        late_time = timezone.datetime(2000, 1, 1, 10, 15).time()
+        late_time = timezone.datetime(2000, 1, 1, 3, 15).time()
 
         if checkin_time_only > late_time:
             self.status = 'late'

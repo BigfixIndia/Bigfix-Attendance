@@ -27,6 +27,8 @@ urlpatterns = [
     path('admin/announcements/', views.admin_dashboard, name='admin_announcements'),
     path('leave_request_view/', views.leave_request_view, name='leave_request_view'),
     path('calendar_page/', views.calendar_page, name='calendar_page'),
+    path('calendar/', views.calendar_page, name='calendar_page'),
+    path('calendar_events/', views.calendar_events, name='calendar_events'),
 
     #path("admin/download-salary-slip/<int:salary_id>/", views.download_salary_slip, name="download_salary_slip"),
     #path('logout/', views.logout, name='logout'),

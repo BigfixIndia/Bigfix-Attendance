@@ -46,6 +46,8 @@ from .models import Attendance_Log
 from datetime import date
 from django.utils.timezone import localtime
 from .models import Holiday
+from operator import itemgetter
+from datetime import date, timedelta
 
 
 
@@ -53,6 +55,79 @@ from .models import  Attendance_Employee_data, Attendance_Attendance_data, QR_Co
 from .forms import UserRegistrationForm, EmployeeRegistrationForm
 from .utils import generate_qr_code
 from django.contrib.admin.views.decorators import staff_member_required
+# Assuming you'll create a model for Tamil Nadu Holidays
+try:
+    from .models import TamilNaduPublicHoliday
+except ImportError:
+    class TamilNaduPublicHoliday:
+        # Dummy class if the model doesn't exist yet
+        objects = []
+
+@login_required
+def calendar_page(request):
+    return render(request, 'attendance/calendar.html')
+
+@login_required
+def calendar_events(request):
+    employee = Attendance_Employee_data.objects.get(user=request.user)
+    events = []
+    today = date.today()
+    start_of_month = date(today.year, today.month, 1)
+    end_of_month = date(today.year, today.month + 1, 1) - timedelta(days=1)
+
+    # Tamil Nadu Public Holidays
+    for holiday in TamilNaduPublicHoliday.objects.filter(date__gte=start_of_month, date__lte=end_of_month):
+        events.append({
+            'title': holiday.title,
+            'start': str(holiday.date),
+            'color': '#dc3545',  # Red for Holidays
+            'allDay': True,
+        })
+
+    # General Holidays
+    for holiday in Holiday.objects.filter(date__gte=start_of_month, date__lte=end_of_month):
+        events.append({
+            'title': holiday.title,
+            'start': str(holiday.date),
+            'color': '#ffc107',  # Yellow for general Holidays
+            'allDay': True,
+        })
+
+    # Workdays (assuming 'Present' status in Attendance_Attendance_data)
+    workdays = Attendance_Attendance_data.objects.filter(
+        employee=employee,
+        date__gte=start_of_month,
+        date__lte=end_of_month,
+        status='Present'
+    )
+    for day in workdays:
+        events.append({
+            'title': 'Work Day',
+            'start': str(day.date),
+            'color': '#198754',  # Green for Workdays
+            'allDay': True,
+        })
+
+    # Leave Requests
+    leave_requests = Attendance_LeaveRequest.objects.filter(
+        employee=employee,
+        is_approved=True,
+        from_date__lte=end_of_month,
+        to_date__gte=start_of_month,
+    )
+    for leave in leave_requests:
+        current_date = leave.from_date
+        while current_date <= leave.to_date:
+            if start_of_month <= current_date <= end_of_month:
+                events.append({
+                    'title': 'Leave',
+                    'start': str(current_date),
+                    'color': '#0d6efd',  # Blue for Leave
+                    'allDay': True,
+                })
+            current_date += timedelta(days=1)
+
+    return JsonResponse(events, safe=False)
 
 
 @staff_member_required
@@ -91,24 +166,32 @@ def dashboard_view(request):
     present_employees = []
     leave_list = []
     absent_list = []
+    today_attendance = None
+    has_checked_in = False
+    has_checked_out = False
+    working_hours_display = None
+    current_employee = None  # Initialize as None
 
     user = request.user
-    current_employee = Attendance_Employee_data.objects.get(user=user)
+    if user.is_authenticated:
+        try:
+            current_employee = Attendance_Employee_data.objects.get(user=user)
 
-    # Get today's attendance for the current user
-    today_attendance = Attendance_Attendance_data.objects.filter(employee=current_employee, date=today).first()
+            # Get today's attendance for the current user
+            today_attendance = Attendance_Attendance_data.objects.filter(employee=current_employee, date=today).first()
 
-    has_checked_in = today_attendance is not None and today_attendance.check_in_time is not None
-    has_checked_out = today_attendance is not None and today_attendance.check_out_time is not None
-    working_hours_display = None
+            has_checked_in = today_attendance is not None and today_attendance.check_in_time is not None
+            has_checked_out = today_attendance is not None and today_attendance.check_out_time is not None
 
-    if has_checked_in and has_checked_out:
-        time_diff = today_attendance.check_out_time - today_attendance.check_in_time
-        # Optional: format into HH:MM format
-        total_seconds = time_diff.total_seconds()
-        hours = int(total_seconds // 3600)
-        minutes = int((total_seconds % 3600) // 60)
-        working_hours_display = f"{hours:02d}:{minutes:02d}"
+            if has_checked_in and has_checked_out:
+                time_diff = today_attendance.check_out_time - today_attendance.check_in_time
+                total_seconds = time_diff.total_seconds()
+                hours = int(total_seconds // 3600)
+                minutes = int((total_seconds % 3600) // 60)
+                working_hours_display = f"{hours:02d}:{minutes:02d}"
+        except Attendance_Employee_data.DoesNotExist:
+            # Handle the case where an authenticated user doesn't have an employee profile
+            pass # Or log an error, redirect, etc.
 
     all_employees = Attendance_Employee_data.objects.filter(user__isnull=False)
 
@@ -152,7 +235,6 @@ def dashboard_view(request):
                 "name": status["name"]
             })
 
-    from operator import itemgetter
     present_employees.sort(key=itemgetter('check_in_raw'))
     status_list = present_employees
 
@@ -167,7 +249,6 @@ def dashboard_view(request):
         "has_checked_out": has_checked_out,
         "working_hours_display": working_hours_display
     })
-
 
 @staff_member_required
 def fetch_attendance_data(request):
@@ -210,7 +291,6 @@ def user_login(request):
             return render(request, 'attendance/login.html') 
 
     return render(request, 'attendance/login.html') 
-
 
 
 def index(request):
@@ -620,35 +700,34 @@ def get_salary_details(request):
 
     return render(request, "attendance/salarydetails.html", context)
 
-@login_required
-def calendar_page(request):
+#@login_required
+#def calendar_page(request):
     # Fetch all events (Holidays and Workdays) here and pass them to the template
-    employee = Attendance_Employee_data.objects.get(user=request.user)
-    events = []
+ #   employee = Attendance_Employee_data.objects.get(user=request.user)
+  #  events = []
 
     # Holidays
-    for holiday in Holiday.objects.all():
-        events.append({
-            'title': holiday.title,
-            'start': str(holiday.date),
-            'color': '#dc3545'  # Red for Holidays
-        })
+   # for holiday in Holiday.objects.all():
+    #       'title': holiday.title,
+     #       'start': str(holiday.date),
+      #      'color': '#dc3545'  # Red for Holidays
+      #  })
 
     # Workdays (if needed)
-    workdays = Attendance_Attendance_data.objects.filter(employee=employee, status='Present')
-    for day in workdays:
-        events.append({
-            'title': 'Work Day',
-            'start': str(day.date),
-            'color': '#198754'  # Green for Workdays
-        })
+    #workdays = Attendance_Attendance_data.objects.filter(employee=employee, status='Present')
+    #for day in workdays:
+     #   events.append({
+      #      'title': 'Work Day',
+       #     'start': str(day.date),
+        #    'color': '#198754'  # Green for Workdays
+   #     })
 
     # Pass events to the calendar page template
-    context = {
-        'events': events
-    }
+    #context = {
+     #   'events': events
+    #}
 
-    return render(request, 'attendance/calendar.html', context)
+    #return render(request, 'attendance/calendar.html', context) %
 
 def logout(request):
     request.session.flush()
