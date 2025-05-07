@@ -159,7 +159,6 @@ def admin_dashboard(request):
     }
     return render(request, "admin_dashboard.html", context)
 
-
 def dashboard_view(request):
     today = date.today()
     status_list = []
@@ -170,14 +169,12 @@ def dashboard_view(request):
     has_checked_in = False
     has_checked_out = False
     working_hours_display = None
-    current_employee = None  # Initialize as None
+    current_employee = None
 
     user = request.user
     if user.is_authenticated:
         try:
             current_employee = Attendance_Employee_data.objects.get(user=user)
-
-            # Get today's attendance for the current user
             today_attendance = Attendance_Attendance_data.objects.filter(employee=current_employee, date=today).first()
 
             has_checked_in = today_attendance is not None and today_attendance.check_in_time is not None
@@ -190,8 +187,7 @@ def dashboard_view(request):
                 minutes = int((total_seconds % 3600) // 60)
                 working_hours_display = f"{hours:02d}:{minutes:02d}"
         except Attendance_Employee_data.DoesNotExist:
-            # Handle the case where an authenticated user doesn't have an employee profile
-            pass # Or log an error, redirect, etc.
+            pass
 
     all_employees = Attendance_Employee_data.objects.filter(user__isnull=False)
 
@@ -209,7 +205,7 @@ def dashboard_view(request):
             "name": f"{user_obj.first_name} {user_obj.last_name}",
             "check_in": None,
             "check_out": None,
-            "color": "",
+            # "color": "", # Removed color logic for late
             "check_in_raw": None
         }
 
@@ -226,8 +222,9 @@ def dashboard_view(request):
                 check_out_ist = timezone.localtime(record.check_out_time)
                 status["check_out"] = check_out_ist.strftime('%I:%M %p')
 
-            if check_in_ist.time() > time(10, 30):
-                status["color"] = "red"
+            # Removed late check logic
+            # if check_in_ist.time() > time(10, 30):
+            #     status["color"] = "red"
 
             present_employees.append(status)
         else:

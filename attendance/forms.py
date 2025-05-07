@@ -28,7 +28,7 @@ class AttendanceForm(forms.ModelForm):
 class LeaveRequestForm(forms.ModelForm):
     class Meta:
         model = Attendance_LeaveRequest
-        fields = ['from_date', 'to_date', 'leave_type', 'message']  # Correct field names
+        fields = ['from_date', 'to_date', 'leave_type', 'message'] 
         widgets = {
             'from_date': forms.SelectDateWidget(),
             'to_date': forms.SelectDateWidget(),

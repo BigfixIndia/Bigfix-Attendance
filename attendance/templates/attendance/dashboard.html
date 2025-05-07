@@ -16,20 +16,20 @@
                 <h5 class="mb-0"><i class="fas fa-user me-2"></i>Employee Profile</h5>
             </div>
             <div class="card-body text-center">.
-                <!--if employee.profile_picture 
+                <!--if employee.profile_picture
                     <img src=" employee.profile_picture.url " alt="Profile Picture" class="img-fluid rounded-circle mb-3" style="width: 120px; height: 120px; object-fit: cover;">
                  else -->
                     <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 120px; height: 120px;">
                         <i class="fas fa-user fa-4x text-secondary"></i>
                     </div>
-                
-                
+
+
                 <h5>{{ employee.user.first_name }} {{ employee.user.last_name }}</h5>
                 <p class="text-muted mb-2">{{ employee.position }}</p>
                 <p class="badge bg-primary">{{ employee.department }}</p>
-                
+
                 <hr>
-                
+
                 <div class="text-start">
                     <p><strong><i class="fas fa-id-card me-2"></i>Employee ID:</strong> {{ employee.employee_id }}</p>
                     <p><strong><i class="fas fa-envelope me-2"></i>Email:</strong> {{ employee.user.email }}</p>
@@ -38,7 +38,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Today's Attendance Card -->
     <div class="col-md-8">
         <div class="card">
@@ -46,24 +46,25 @@
                 <h5 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Today's Attendance</h5>
             </div>
             <div class="card-body">
-            {% if has_checked_in %}
+            {% if has_checked_in %} {# Use has_checked_in from context #}
                 <div class="alert alert-success">
                     <i class="fas fa-check-circle me-2"></i>
-                    You have checked in {{ today_attendance.check_in_time|time:"h:i A" }}
+                    You have checked in at {{ mark_attendance.check_in_time|time:"h:i A" }} {# Use mark_attendance context variable #}
                 </div>
 
-                {% if has_checked_out %}
+                {% if has_checked_out %} {# Use has_checked_out from context #}
                     <div class="alert alert-info">
                         <i class="fas fa-sign-out-alt me-2"></i>
-                        You have checked out  {{ today_attendance.check_out_time|time:"h:i A" }}
-                        <strong>Total working hours:</strong> <p>Working Hours: {{ working_hours_display }}
+                        You have checked out at {{ mark_attendance.check_out_time|time:"h:i A" }} {# Use mark_attendance context variable #}
+                        <br> {# Added line break for clarity #}
+                        <strong>Total working hours:</strong> {{ working_hours_display|default:"Calculating..." }} {# Use working_hours_display context variable #}
                     </div>
                 {% else %}
                     <div class="alert alert-warning">
                         <i class="fas fa-exclamation-triangle me-2"></i>
                         You haven't checked out yet.
                     </div>
-                    <a href="{% url 'scan_qr_code' %}" class="btn btn-primary">
+                    <a href="{% url 'scan_qr_code' %}" class="btn btn-primary"> {# Keep original button style #}
                         <i class="fas fa-sign-out-alt me-2"></i>Check Out
                     </a>
                 {% endif %}
@@ -73,11 +74,11 @@
                     <i class="fas fa-exclamation-triangle me-2"></i>
                     You haven't checked in yet.
                 </div>
-                <a href="{% url 'scan_qr_code' %}" class="btn btn-success">
+                <a href="{% url 'scan_qr_code' %}" class="btn btn-success"> {# Keep original button style #}
                     <i class="fas fa-sign-in-alt me-2"></i>Check In
                 </a>
             {% endif %}
-        </div>
+            </div>
         </div>
 
      <!-- Announcements-->
@@ -125,27 +126,27 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <div class="modal-body">
-            
+
             <div class="mb-3">
               <label for="leaveType" class="form-label">Type of Leave</label>
               {{ leave_form.leave_type }}
             </div>
-  
+
             <div class="mb-3">
               <label for="fromDate" class="form-label">From Date</label>
               {{ leave_form.from_date }}
             </div>
-  
+
             <div class="mb-3">
               <label for="toDate" class="form-label">To Date</label>
               {{ leave_form.to_date }}
             </div>
-  
+
             <div class="mb-3">
               <label for="reason" class="form-label">Reason</label>
               {{ leave_form.message }}
             </div>
-  
+
           </div>
           <div class="modal-footer">
             <button type="submit" class="btn btn-success" name="leave_request">Submit Request</button>
@@ -155,7 +156,7 @@
       </div>
     </div>
   </div>
- 
+
 
         <!-- View salary-->
         <div class="card mt-4">
@@ -166,14 +167,14 @@
                 <button id="viewSalaryBtn" class="btn btn-primary">
                     <i class="fas fa-eye me-2"></i> View Salary
                 </button>
-        
+
                 <div id="salaryDetails" style="display: none; margin-top: 10px;">
                     <p><strong>Total Present Days:</strong> <span id="presentDays"></span></p>
                     <p><strong>Total Salary Earned (Till Today):</strong> ₹<span id="totalSalary"></span></p>
                 </div>
             </div>
         </div>
-        {% endcomment %}      
+{% endcomment %}
         <!-- Recent Attendance Card -->
         <div class="card mt-4">
             <div class="card-header">
@@ -210,23 +211,23 @@
                                         {% endif %}
                                     </td>
                                     <td>
+                                        {# Display working_hours_display if it exists in context for the record #}
                                         {% if attendance.working_hours_display %}
                                             {{ attendance.working_hours_display }}
                                         {% else %}
-                                            <span class="text-muted">-</span>
+                                             <span class="text-muted">-</span>
                                         {% endif %}
                                     </td>
                                     <td>
                                         {% if attendance.status == 'present' %}
                                             <span class="badge bg-success">Present</span>
-                                        {% elif attendance.status == 'late' %}
-                                            <span class="badge bg-warning">Late</span>
+
                                         {% elif attendance.status == 'half_day' %}
                                             <span class="badge bg-info">Half Day</span>
                                         {% elif attendance.status == 'absent' %}
                                             <span class="badge bg-danger">Absent</span>
                                         {% else %}
-                                            <span class="text-muted">-</span>
+                                            <span class="text-muted">-</span> {# Default fallback #}
                                         {% endif %}
                                     </td>
                                 </tr>
