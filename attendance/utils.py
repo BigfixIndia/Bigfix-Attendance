@@ -16,9 +16,10 @@ def generate_qr_code(request):
     """
     Generate a unique QR code for today's attendance.
     """
-    employee = request.user  
+    employee = request.user  # Assuming request.user is linked to Attendance_Employee_data
     today = timezone.now().date()
-    qr_data = f"attendance/{employee.id}/{today}"  
+    qr_data = f"attendance/{employee.id}/{today}"  # 🔹 Dynamic QR Code URL
+
     # Check if QR code already exists
     qr_code, created = QR_Code.objects.get_or_create(
         code=qr_data,

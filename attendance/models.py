@@ -1,5 +1,3 @@
-# models.py
-
 import datetime
 from django.db import models
 from django.contrib.auth.models import User
@@ -15,7 +13,8 @@ class Attendance_Employee_data(models.Model):
     phone_number = models.CharField(max_length=15)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True),
+    updated_at = models.DateTimeField(auto_now=True)
+
     class Meta:
         db_table = "attendance_employee_data"
 
@@ -30,11 +29,11 @@ class Attendance_Attendance_data(models.Model):
     status = models.CharField(max_length=20, choices=[
         ('present', 'Present'),
         ('absent', 'Absent'),
-        # ('late', 'Late'), # Removed 'late'
+        ('late', 'Late'),
         ('half_day', 'Half Day'),
     ], default='present')
     working_hours = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    overtime_hours = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    overtime_hours = models.DecimalField(max_digits=5, decimal_places=2, default=0)  # ✅ New Field
     notes = models.TextField(blank=True, null=True)
 
     class Meta:
@@ -45,36 +44,33 @@ class Attendance_Attendance_data(models.Model):
         return f"{self.employee.user.first_name} - {self.date}"
 
     def save(self, *args, **kwargs):
-        if not self.date:
-            self.date = timezone.now().date()
+      if not self.date:
+        self.date = timezone.now().date()
 
-        if self.check_in_time and self.check_out_time:
-            # Calculate working hours
-            time_diff = self.check_out_time - self.check_in_time
-            hours = time_diff.total_seconds() / 3600
-            self.working_hours = round(hours, 2)
+      if self.check_in_time and self.check_out_time:
+        # Calculate working hours
+        time_diff = self.check_out_time - self.check_in_time
+        hours = time_diff.total_seconds() / 3600
+        self.working_hours = round(hours, 2)
 
-            # Removed late check
-            # checkin_time_only = self.check_in_time.astimezone(timezone.get_current_timezone()).time()
-            # late_time = timezone.datetime(2000, 1, 1, 3, 15).time() # Using 3:15 AM UTC as example, adjust as needed
+        # Check late first (before working hours)
+        checkin_time_only = self.check_in_time.astimezone(timezone.get_current_timezone()).time()
+        late_time = timezone.datetime(2000, 1, 1, 3, 15).time()
 
-            # Simplified status based on working hours only
-            if hours < 4: # Example threshold for half-day
-                self.status = 'half_day'
-            else:
-                self.status = 'present'
+        if checkin_time_only > late_time:
+            self.status = 'late'
+        elif hours < 4:
+            self.status = 'half_day'
+        else:
+            self.status = 'present'
 
-            # Overtime
-            if self.working_hours > 8: # Example standard workday length
-                self.overtime_hours = self.working_hours - 8
-            else:
-                self.overtime_hours = 0
+        # Overtime
+        if self.working_hours > 8:
+            self.overtime_hours = self.working_hours - 8
+        else:
+            self.overtime_hours = 0
 
-        # Only set default status if check-in/out times are not both set
-        # The default 'present' on the field definition handles the initial state
-        # No explicit 'else' needed here unless you want to force 'absent' if times are missing
-
-        super().save(*args, **kwargs)
+      super().save(*args, **kwargs)
 
 
 class QR_Code(models.Model):
@@ -89,7 +85,7 @@ class QR_Code(models.Model):
 
     def __str__(self):
         return f"QR Code - {self.location}"
-
+    
 class Announcement(models.Model):
     title = models.CharField(max_length=255)
     message = models.TextField()
@@ -105,7 +101,7 @@ class Announcement(models.Model):
 
     def __str__(self):
         return self.title
-
+    
 class AnnouncementRead(models.Model):
     announcement = models.ForeignKey(
         'Announcement',
@@ -132,7 +128,7 @@ class  Attendance_LeaveRequest(models.Model):
     employee = models.ForeignKey(Attendance_Employee_data, on_delete=models.CASCADE)
     from_date = models.DateField(default=date.today, null=False)
     to_date = models.DateField(default=date.today,null=False)
-    leave_type = models.CharField(max_length=20, choices=LEAVE_TYPES, default='sick')
+    leave_type = models.CharField(max_length=20, choices=LEAVE_TYPES, default='sick')  # Add default here
     message = models.TextField(blank=True, null=True)
     is_approved = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -159,17 +155,17 @@ class Attendance_Log(models.Model):
     def __str__(self):
         return f"{self.employee} - {self.action} at {self.timestamp}"
 
-
+    
 class Payroll_Salary(models.Model):
     employee = models.OneToOneField(Attendance_Employee_data, on_delete=models.CASCADE)
     base_salary = models.DecimalField(max_digits=10, decimal_places=2)  # Monthly Salary
     overtime_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # Per hour
     bonus = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     deductions = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-
+    
     class Meta:
         db_table = "payroll_salary"
-
+    
     def __str__(self):
         return f"{self.employee.user.first_name} - Salary Details"
 
@@ -188,7 +184,7 @@ class Payroll_Payments(models.Model):
 
     def __str__(self):
         return f"{self.employee.user.first_name} - Payroll {self.month}/{self.year}"
-
+    
 class Holiday(models.Model):
     title = models.CharField(max_length=100)
     date = models.DateField()
