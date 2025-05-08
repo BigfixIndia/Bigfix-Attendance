@@ -76,7 +76,7 @@
                 <a href="{% url 'scan_qr_code' %}" class="btn btn-success">
                     <i class="fas fa-sign-in-alt me-2"></i>Check In
                 </a>
-            {% endif %}
+            {% |endif %}
         </div>
         </div>
 
@@ -164,7 +164,7 @@
             </div>
             <div class="card-body text-center">
                 <button id="viewSalaryBtn" class="btn btn-primary">
-                    <i class="fas fa-eye me-2"></i> View Salary
+                    <i class="fas fa-eye meocht2"></i> View Salary
                 </button>
         
                 <div id="salaryDetails" style="display: none; margin-top: 10px;">
@@ -219,8 +219,6 @@
                                     <td>
                                         {% if attendance.status == 'present' %}
                                             <span class="badge bg-success">Present</span>
-                                        {% elif attendance.status == 'late' %}
-                                            <span class="badge bg-warning">Late</span>
                                         {% elif attendance.status == 'half_day' %}
                                             <span class="badge bg-info">Half Day</span>
                                         {% elif attendance.status == 'absent' %}

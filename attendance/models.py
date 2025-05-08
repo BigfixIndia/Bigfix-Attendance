@@ -33,7 +33,7 @@ class Attendance_Attendance_data(models.Model):
         ('half_day', 'Half Day'),
     ], default='present')
     working_hours = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    overtime_hours = models.DecimalField(max_digits=5, decimal_places=2, default=0)  # ✅ New Field
+    overtime_hours = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     notes = models.TextField(blank=True, null=True)
 
     class Meta:
@@ -44,34 +44,28 @@ class Attendance_Attendance_data(models.Model):
         return f"{self.employee.user.first_name} - {self.date}"
 
     def save(self, *args, **kwargs):
-      if not self.date:
-        self.date = timezone.now().date()
+        if not self.date:
+            self.date = timezone.now().date()
 
-      if self.check_in_time and self.check_out_time:
-        # Calculate working hours
-        time_diff = self.check_out_time - self.check_in_time
-        hours = time_diff.total_seconds() / 3600
-        self.working_hours = round(hours, 2)
+        if self.check_in_time and self.check_out_time:
+            # Calculate working hours
+            time_diff = self.check_out_time - self.check_in_time
+            hours = time_diff.total_seconds() / 3600
+            self.working_hours = round(hours, 2)
 
-        # Check late first (before working hours)
-        checkin_time_only = self.check_in_time.astimezone(timezone.get_current_timezone()).time()
-        late_time = timezone.datetime(2000, 1, 1, 3, 15).time()
+            # Set status based on working hours
+            if hours < 4:
+                self.status = 'half_day'
+            else:
+                self.status = 'present'
 
-        if checkin_time_only > late_time:
-            self.status = 'late'
-        elif hours < 4:
-            self.status = 'half_day'
-        else:
-            self.status = 'present'
+            # Overtime
+            if self.working_hours > 8:
+                self.overtime_hours = self.working_hours - 8
+            else:
+                self.overtime_hours = 0
 
-        # Overtime
-        if self.working_hours > 8:
-            self.overtime_hours = self.working_hours - 8
-        else:
-            self.overtime_hours = 0
-
-      super().save(*args, **kwargs)
-
+        super().save(*args, **kwargs)
 
 class QR_Code(models.Model):
     location = models.CharField(max_length=100, default="Office", unique=True)
@@ -93,7 +87,6 @@ class Announcement(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
     attachment = models.FileField(upload_to='attachments/', null=True, blank=True)
-
 
     class Meta:
         db_table = "announcements"
@@ -118,7 +111,7 @@ class AnnouncementRead(models.Model):
     class Meta:
         unique_together = ('announcement', 'user')
 
-class  Attendance_LeaveRequest(models.Model):
+class Attendance_LeaveRequest(models.Model):
     LEAVE_TYPES = [
         ('sick', 'Sick Leave'),
         ('casual', 'Casual Leave'),
@@ -127,8 +120,8 @@ class  Attendance_LeaveRequest(models.Model):
     ]
     employee = models.ForeignKey(Attendance_Employee_data, on_delete=models.CASCADE)
     from_date = models.DateField(default=date.today, null=False)
-    to_date = models.DateField(default=date.today,null=False)
-    leave_type = models.CharField(max_length=20, choices=LEAVE_TYPES, default='sick')  # Add default here
+    to_date = models.DateField(default=date.today, null=False)
+    leave_type = models.CharField(max_length=20, choices=LEAVE_TYPES, default='sick')
     message = models.TextField(blank=True, null=True)
     is_approved = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -155,11 +148,10 @@ class Attendance_Log(models.Model):
     def __str__(self):
         return f"{self.employee} - {self.action} at {self.timestamp}"
 
-    
 class Payroll_Salary(models.Model):
     employee = models.OneToOneField(Attendance_Employee_data, on_delete=models.CASCADE)
-    base_salary = models.DecimalField(max_digits=10, decimal_places=2)  # Monthly Salary
-    overtime_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # Per hour
+    base_salary = models.DecimalField(max_digits=10, decimal_places=2)
+    overtime_rate = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     bonus = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     deductions = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     
@@ -171,7 +163,7 @@ class Payroll_Salary(models.Model):
 
 class Payroll_Payments(models.Model):
     employee = models.ForeignKey(Attendance_Employee_data, on_delete=models.CASCADE)
-    month = models.IntegerField()  # Example: April = 4
+    month = models.IntegerField()
     year = models.IntegerField()
     total_working_days = models.IntegerField()
     total_present_days = models.IntegerField()
