@@ -358,7 +358,6 @@ def dashboard(request):
 
     # ➕ Add leave request form
     leave_form = LeaveRequestForm()
-    existing_leave = Attendance_LeaveRequest.objects.filter(employee=employee).order_by('-created_at')
 
 
     if request.method == 'POST' and 'leave_request' in request.POST:
@@ -405,7 +404,6 @@ def dashboard(request):
         'announcements': announcements,
         'unread_count': len(unread_announcements),
         'leave_form': leave_form,
-        'existing_leave': existing_leave,
         'today_logs': today_logs,
     }
 
@@ -415,7 +413,8 @@ def dashboard(request):
 def leave_request_view(request):
     employee = get_object_or_404(Attendance_Employee_data, user=request.user)
     leave_form = LeaveRequestForm()
-
+    
+    existing_leave = Attendance_LeaveRequest.objects.filter(employee=employee).order_by('-created_at')
     if request.method == 'POST' and 'leave_request' in request.POST:
         leave_form = LeaveRequestForm(request.POST)
         if leave_form.is_valid():
@@ -425,7 +424,7 @@ def leave_request_view(request):
             messages.success(request, "Leave request submitted successfully!")
             return redirect('dashboard')  # or wherever you want to redirect
 
-    return render(request, 'attendance/leave_request.html', {'leave_form': leave_form})
+    return render(request, 'attendance/leave_request.html', {'leave_form': leave_form,'existing_leave': existing_leave,})
 
 @login_required
 @require_http_methods(["GET"])

@@ -47,7 +47,41 @@
                     </form>
                 </div>
             </div>
-
+            <h3>Leave Requests</h3>
+            {% if existing_leave %}
+            <table class="table">
+                <thead>
+                <tr>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Admin Reply</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for leave in existing_leave %}
+                    <tr>
+                    <td>{{ leave.from_date }}</td>
+                    <td>{{ leave.to_date }}</td>
+                    <td>{{ leave.get_leave_type_display }}</td>
+                    <td>
+                        {% if leave.status == 'approved' %}
+                        <span class="badge bg-success">Approved</span>
+                        {% elif leave.status == 'denied' %}
+                        <span class="badge bg-danger">Denied</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">Pending</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ leave.admin_reply|default:"—" }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No leave requests found.</p>
+            {% endif %}
             <!-- Optional Help Info -->
             <div class="alert alert-info mt-4 rounded-3 shadow-sm" role="alert">
                 <i class="fas fa-info-circle me-2"></i>
