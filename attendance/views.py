@@ -48,6 +48,7 @@ from django.utils.timezone import localtime
 from .models import Holiday
 from operator import itemgetter
 from datetime import date, timedelta
+from django.contrib.auth.decorators import user_passes_test
 
 
 
@@ -130,6 +131,10 @@ def calendar_events(request):
     return JsonResponse(events, safe=False)
 
 
+def is_admin(user):
+    return user.is_superuser or user.is_staff
+
+@user_passes_test(is_admin)
 @staff_member_required
 def admin_dashboard(request):
     today = datetime.today().strftime('%Y-%m-%d')
@@ -353,7 +358,8 @@ def dashboard(request):
 
     # ➕ Add leave request form
     leave_form = LeaveRequestForm()
-    existing_leave = Attendance_LeaveRequest.objects.filter(employee=employee).first()
+    existing_leave = Attendance_LeaveRequest.objects.filter(employee=employee).order_by('-created_at')
+
 
     if request.method == 'POST' and 'leave_request' in request.POST:
         leave_form = LeaveRequestForm(request.POST)
@@ -407,16 +413,19 @@ def dashboard(request):
 
 @login_required
 def leave_request_view(request):
+    employee = get_object_or_404(Attendance_Employee_data, user=request.user)
     leave_form = LeaveRequestForm()
+
     if request.method == 'POST' and 'leave_request' in request.POST:
         leave_form = LeaveRequestForm(request.POST)
         if leave_form.is_valid():
             leave = leave_form.save(commit=False)
-            leave.user = request.user
+            leave.employee = employee  # ✅ Correct assignment
             leave.save()
+            messages.success(request, "Leave request submitted successfully!")
             return redirect('dashboard')  # or wherever you want to redirect
-    return render(request, 'attendance/leave_request.html', {'leave_form': leave_form})
 
+    return render(request, 'attendance/leave_request.html', {'leave_form': leave_form})
 
 @login_required
 @require_http_methods(["GET"])

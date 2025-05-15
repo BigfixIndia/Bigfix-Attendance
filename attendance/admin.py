@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.timezone import localtime
 from django.utils.html import format_html
-from .models import Attendance_Attendance_data, Payroll_Salary, Payroll_Payments  # Ensure correct imports
+from .models import Attendance_Attendance_data, Payroll_Salary, Payroll_Payments, Attendance_LeaveRequest  # Ensure correct imports
 
 
 @admin.register(Attendance_Attendance_data)
@@ -52,3 +52,26 @@ class PayrollPaymentsAdmin(admin.ModelAdmin):
         return "Paid" if obj.net_salary > 0 else "Unpaid"
     
     get_payment_status.short_description = "Payment Status"
+
+@admin.register(Attendance_LeaveRequest)
+class LeaveRequestAdmin(admin.ModelAdmin):
+    list_display = ('employee', 'from_date', 'to_date', 'leave_type', 'status', 'admin_reply', 'created_at')
+    list_filter = ('status', 'leave_type')
+    search_fields = ('employee__user__username', 'message')
+    readonly_fields = ('employee', 'from_date', 'to_date', 'leave_type', 'message', 'created_at')
+
+    # Enable status and reply message to be edited
+    fields = ('employee', 'from_date', 'to_date', 'leave_type', 'message', 'status', 'admin_reply', 'created_at')
+
+    actions = ['mark_approved', 'mark_denied']
+
+    def mark_approved(self, request, queryset):
+        updated = queryset.update(status='approved')
+        self.message_user(request, f"{updated} request(s) marked as Approved.")
+
+    def mark_denied(self, request, queryset):
+        updated = queryset.update(status='denied')
+        self.message_user(request, f"{updated} request(s) marked as Denied.")
+
+    mark_approved.short_description = "Mark selected leave requests as Approved"
+    mark_denied.short_description = "Mark selected leave requests as Denied"

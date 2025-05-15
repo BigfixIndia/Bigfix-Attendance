@@ -118,20 +118,30 @@ class Attendance_LeaveRequest(models.Model):
         ('emergency', 'Emergency Leave'),
         ('other', 'Other'),
     ]
+
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('approved', 'Approved'),
+        ('denied', 'Denied'),
+    ]
+
     employee = models.ForeignKey(Attendance_Employee_data, on_delete=models.CASCADE)
     from_date = models.DateField(default=date.today, null=False)
     to_date = models.DateField(default=date.today, null=False)
     leave_type = models.CharField(max_length=20, choices=LEAVE_TYPES, default='sick')
     message = models.TextField(blank=True, null=True)
-    is_approved = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    # ✅ Add these new fields:
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
+    admin_reply = models.TextField(blank=True, null=True)
 
     class Meta:
         db_table = "attendance_leave_request"
         unique_together = ['employee', 'from_date']
 
     def __str__(self):
-        return f"Leave from {self.from_date} to {self.to_date} by {self.employee.user.username}"
+        return f"Leave {self.status} from {self.from_date} to {self.to_date} by {self.employee.user.username}"
 
 class Attendance_Log(models.Model):
     employee = models.ForeignKey(Attendance_Employee_data, on_delete=models.CASCADE)
