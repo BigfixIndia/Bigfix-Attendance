@@ -49,6 +49,9 @@ from .models import Holiday
 from operator import itemgetter
 from datetime import date, timedelta
 from django.contrib.auth.decorators import user_passes_test
+from calendar import monthrange
+from dateutil.relativedelta import relativedelta
+
 
 
 
@@ -376,13 +379,42 @@ def dashboard(request):
         working_hours_display = calculate_working_hours(time_diff)
 
     # Recent attendance
-    recent_attendances = Attendance_Attendance_data.objects.filter(employee=employee).order_by('-date')[:7]
+    # Get selected month from GET params (format: "YYYY-MM")
+    selected_month = request.GET.get('month')
+    today = date.today()
+
+    if selected_month:
+        selected_date = datetime.strptime(selected_month, "%Y-%m").date()
+    else:
+        selected_date = today.replace(day=1)
+
+    start_date = selected_date.replace(day=1)
+    end_date = (start_date + relativedelta(months=1)) - relativedelta(days=1)
+
+    # Fetch attendances for selected month only
+    recent_attendances = Attendance_Attendance_data.objects.filter(
+        employee=employee,
+        date__range=(start_date, end_date)
+    ).order_by('-date')
+
+    # Calculate working hours
     for record in recent_attendances:
         if record.check_in_time and record.check_out_time:
             diff_hours = (record.check_out_time - record.check_in_time).total_seconds() / 3600
             record.working_hours_display = calculate_working_hours(diff_hours)
         else:
             record.working_hours_display = "0 hr 0 min"
+
+    # Month options for dropdown (current + past 2 months)
+    month_options = []
+    for i in range(3):
+        dt = today - relativedelta(months=i)
+        month_options.append({
+            "value": dt.strftime("%Y-%m"),
+            "label": dt.strftime("%B %Y")
+        })
+
+    
 
     # Announcements
     announcements = Announcement.objects.filter(is_active=True).order_by('-created_at')[:5]
@@ -405,9 +437,70 @@ def dashboard(request):
         'unread_count': len(unread_announcements),
         'leave_form': leave_form,
         'today_logs': today_logs,
+        "recent_attendances": recent_attendances,
+        "month_options": month_options,
+        "selected_month": selected_month or today.strftime("%Y-%m")
     }
 
     return render(request, 'attendance/dashboard.html', context)
+
+
+def calculate_working_hours(diff_hours):
+    hours = int(diff_hours)
+    minutes = int((diff_hours - hours) * 60)
+    return f"{hours} hr {minutes} min"
+
+@login_required
+def get_recent_attendance_data(request):
+    try:
+        employee = Attendance_Employee_data.objects.get(user=request.user)
+    except Attendance_Employee_data.DoesNotExist:
+        return render(request, 'attendance/error.html', {'message': 'Employee record not found.'})
+
+    today = date.today()
+
+    # Get selected month from GET params
+    selected_month = request.GET.get('month')
+    if selected_month:
+        try:
+            selected_date = datetime.strptime(selected_month, "%Y-%m").date()
+        except ValueError:
+            selected_date = today.replace(day=1)
+    else:
+        selected_date = today.replace(day=1)
+
+    start_date = selected_date.replace(day=1)
+    end_date = (start_date + relativedelta(months=1)) - relativedelta(days=1)
+
+    # Fetch attendance for the selected month
+    recent_attendances = Attendance_Attendance_data.objects.filter(
+        employee=employee,
+        date__range=(start_date, end_date)
+    ).order_by('-date')
+
+    for record in recent_attendances:
+        if record.check_in_time and record.check_out_time:
+            diff_hours = (record.check_out_time - record.check_in_time).total_seconds() / 3600
+            record.working_hours_display = calculate_working_hours(diff_hours)
+        else:
+            record.working_hours_display = "0 hr 0 min"
+
+    # Dropdown options for current + past 2 months
+    month_options = []
+    for i in range(3):
+        dt = today - relativedelta(months=i)
+        month_options.append({
+            "value": dt.strftime("%Y-%m"),
+            "label": dt.strftime("%B %Y")
+        })
+
+    context = {
+        "recent_attendances": recent_attendances,
+        "month_options": month_options,
+        "selected_month": selected_date.strftime("%Y-%m"),
+    }
+
+    return render(request, 'attendance/attendance_history.html', context)
 
 @login_required
 def leave_request_view(request):
@@ -736,6 +829,69 @@ def get_salary_details(request):
     #}
 
     #return render(request, 'attendance/calendar.html', context) %
+
+@login_required
+def monthly_attendance_view(request, year=None, month=None):
+    user = request.user
+    employee = Attendance_Employee_data.objects.get(user=user)
+
+    # Defaults to current month/year if not provided
+    today = datetime.today()
+    if not year or not month:
+        year = today.year
+        month = today.month
+
+    num_days = monthrange(year, month)[1]
+    month_start = datetime(year, month, 1).date()
+    month_end = datetime(year, month, num_days).date()
+
+    daily_data = []
+
+    for day in range(1, num_days + 1):
+        current_date = datetime(year, month, day).date()
+        weekday = current_date.strftime('%A')
+        
+        # Check for leave
+        leave = Attendance_LeaveRequest.objects.filter(
+            employee=employee,
+            from_date__lte=current_date,
+            to_date__gte=current_date,
+            status='approved'
+        ).first()
+
+        # Check for attendance
+        attendance = Attendance_Attendance_data.objects.filter(
+            employee=employee,
+            date=current_date
+        ).first()
+
+        status = "Absent"
+        working_hours = None
+
+        if leave:
+            status = "Leave"
+        elif current_date.weekday() == 6:  # Sunday
+            status = "Holiday"
+        elif attendance and attendance.check_in_time and attendance.check_out_time:
+            duration = attendance.check_out_time - attendance.check_in_time
+            total_seconds = duration.total_seconds()
+            hours = int(total_seconds // 3600)
+            minutes = int((total_seconds % 3600) // 60)
+            working_hours = f"{hours} hrs {minutes} mins"
+            status = "Present"
+
+        daily_data.append({
+            "date": current_date,
+            "day": weekday,
+            "status": status,
+            "working_hours": working_hours
+        })
+
+    context = {
+        "daily_data": daily_data,
+        "selected_month": datetime(year, month, 1).strftime('%B %Y')
+    }
+    return render(request, 'attendance/monthly_attendance.html', context)
 
 def logout(request):
     request.session.flush()

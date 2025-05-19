@@ -29,6 +29,9 @@ urlpatterns = [
     path('calendar_page/', views.calendar_page, name='calendar_page'),
     path('calendar/', views.calendar_page, name='calendar_page'),
     path('calendar_events/', views.calendar_events, name='calendar_events'),
+    path('get_recent_attendance_data/', views.get_recent_attendance_data, name='get_recent_attendance_data'),
+    path('monthly_attendance/<int:year>/<int:month>/', views.monthly_attendance_view, name='monthly_attendance'),
+
 
     #path("admin/download-salary-slip/<int:salary_id>/", views.download_salary_slip, name="download_salary_slip"),
     #path('logout/', views.logout, name='logout'),

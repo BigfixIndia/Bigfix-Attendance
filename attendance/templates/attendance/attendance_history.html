@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Attendance Dashboard</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">Attendance Dashboard</a>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+
+    <!-- Attendance History Toggle Button -->
+    <div class="text-end mb-3">
+      <button class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#attendanceHistory" aria-expanded="false" aria-controls="attendanceHistory">
+        <i class="fas fa-calendar-alt me-1"></i> Attendance History
+      </button>
+    </div>
+
+    <!-- Collapsible Attendance History Section -->
+    <div class="collapse" id="attendanceHistory">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0"><i class="fas fa-history me-2"></i>Attendance History</h5>
+          <!-- Month Dropdown -->
+          <form method="get" class="d-flex">
+            <select name="month" class="form-select me-2" onchange="this.form.submit()">
+              {% for option in month_options %}
+                <option value="{{ option.value }}" {% if selected_month == option.value %}selected{% endif %}>{{ option.label }}</option>
+              {% endfor %}
+            </select>
+          </form>
+        </div>
+        
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Check-in</th>
+                <th>Check-out</th>
+                <th>Working Hours</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for attendance in recent_attendances %}
+                <tr>
+                  <td>{{ attendance.date|date:"M d, Y" }}</td>
+                  <td>
+                    {% if attendance.check_in_time %}
+                      {{ attendance.check_in_time|time:"h:i A" }}
+                    {% else %}
+                      <span class="badge bg-warning">Not checked in</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if attendance.check_out_time %}
+                      {{ attendance.check_out_time|time:"h:i A" }}
+                    {% else %}
+                      <span class="badge bg-warning">Not checked out</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ attendance.working_hours_display }}</td>
+                  <td>
+                    {% if attendance.status == 'present' %}
+                      <span class="badge bg-success">Present</span>
+                    {% elif attendance.status == 'half_day' %}
+                      <span class="badge bg-info">Half Day</span>
+                    {% elif attendance.status == 'absent' %}
+                      <span class="badge bg-danger">Absent</span>
+                    {% else %}
+                      <span class="text-muted">-</span>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% empty %}
+                <tr>
+                  <td colspan="5" class="text-center">No recent attendance records found.</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bootstrap JS and dependencies -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Font Awesome for icons (optional) -->
+  <script src="https://kit.fontawesome.com/yourkitid.js" crossorigin="anonymous"></script>
+</body>
+</html>
