@@ -11,6 +11,9 @@ import qrcode
 from io import BytesIO  
 from django.core.files.base import ContentFile
 from .models import QR_Code
+from datetime import date, datetime
+from dateutil.relativedelta import relativedelta
+from .models import Attendance_Attendance_data
 
 def generate_qr_code(request):
     """
@@ -49,4 +52,6 @@ def generate_qr_code(request):
         qr_code.image.save(f"qr_{employee.id}_{today}.png", ContentFile(buffer.getvalue()), save=True)
 
     return qr_code
+
+
 
