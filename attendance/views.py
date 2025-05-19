@@ -49,6 +49,7 @@ from .models import Holiday
 from operator import itemgetter
 from datetime import date, timedelta
 from django.contrib.auth.decorators import user_passes_test
+from django.db.models import Prefetch
 
 
 
@@ -175,40 +176,45 @@ def dashboard_view(request):
     has_checked_in = False
     has_checked_out = False
     working_hours_display = None
-    current_employee = None  # Initialize as None
+    current_employee = None
 
+    # Process current user if logged in
     user = request.user
     if user.is_authenticated:
         try:
-            current_employee = Attendance_Employee_data.objects.get(user=user)
-
-            # Get today's attendance for the current user
+            current_employee = Attendance_Employee_data.objects.select_related('user').get(user=user)
             today_attendance = Attendance_Attendance_data.objects.filter(employee=current_employee, date=today).first()
 
-            has_checked_in = today_attendance is not None and today_attendance.check_in_time is not None
-            has_checked_out = today_attendance is not None and today_attendance.check_out_time is not None
+            if today_attendance:
+                has_checked_in = today_attendance.check_in_time is not None
+                has_checked_out = today_attendance.check_out_time is not None
 
-            if has_checked_in and has_checked_out:
-                time_diff = today_attendance.check_out_time - today_attendance.check_in_time
-                total_seconds = time_diff.total_seconds()
-                hours = int(total_seconds // 3600)
-                minutes = int((total_seconds % 3600) // 60)
-                working_hours_display = f"{hours:02d}:{minutes:02d}"
+                if has_checked_in and has_checked_out:
+                    time_diff = today_attendance.check_out_time - today_attendance.check_in_time
+                    total_seconds = time_diff.total_seconds()
+                    hours = int(total_seconds // 3600)
+                    minutes = int((total_seconds % 3600) // 60)
+                    working_hours_display = f"{hours:02d}:{minutes:02d}"
         except Attendance_Employee_data.DoesNotExist:
-            # Handle the case where an authenticated user doesn't have an employee profile
-            pass # Or log an error, redirect, etc.
+            pass
 
-    all_employees = Attendance_Employee_data.objects.filter(user__isnull=False)
+    # Prefetch today's attendance and approved leaves
+    today_attendance_qs = Attendance_Attendance_data.objects.filter(date=today)
+    today_leave_qs = Attendance_LeaveRequest.objects.filter(
+        from_date__lte=today,
+        to_date__gte=today,
+        status='approved'
+    )
+
+    all_employees = Attendance_Employee_data.objects.filter(user__isnull=False).select_related('user').prefetch_related(
+        Prefetch('attendance_attendance_data_set', queryset=today_attendance_qs, to_attr='today_attendance'),
+        Prefetch('attendance_leaverequest_set', queryset=today_leave_qs, to_attr='today_leave')
+    )
 
     for employee in all_employees:
         user_obj = employee.user
-        record = Attendance_Attendance_data.objects.filter(employee=employee, date=today).first()
-        leave = Attendance_LeaveRequest.objects.filter(
-            employee=employee,
-            from_date__lte=today,
-            to_date__gte=today,
-            is_approved=True
-        ).first()
+        record = employee.today_attendance[0] if employee.today_attendance else None
+        leave = employee.today_leave[0] if employee.today_leave else None
 
         status = {
             "name": f"{user_obj.first_name} {user_obj.last_name}",
@@ -219,9 +225,7 @@ def dashboard_view(request):
         }
 
         if leave:
-            leave_list.append({
-                "employee__name": status["name"]
-            })
+            leave_list.append({"employee__name": status["name"]})
         elif record and record.check_in_time:
             check_in_ist = timezone.localtime(record.check_in_time)
             status["check_in"] = check_in_ist.strftime('%I:%M %p')
@@ -236,9 +240,7 @@ def dashboard_view(request):
 
             present_employees.append(status)
         else:
-            absent_list.append({
-                "name": status["name"]
-            })
+            absent_list.append({"name": status["name"]})
 
     present_employees.sort(key=itemgetter('check_in_raw'))
     status_list = present_employees
