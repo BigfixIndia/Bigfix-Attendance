@@ -345,23 +345,14 @@ def calculate_working_hours(working_hours):
 @csrf_exempt
 @login_required
 def dashboard(request):
-    
-    today = timezone.now().date()  # ✅ Define 'today' BEFORE using it below
-
+    today = timezone.now().date()
     employee = get_object_or_404(Attendance_Employee_data, user=request.user)
-    
-    today_logs = Attendance_Log.objects.filter(
-        employee=employee,
-        timestamp__date=today
-    ).order_by('timestamp')
 
+    today_logs = Attendance_Log.objects.filter(employee=employee, timestamp__date=today).order_by('timestamp')
     mark_attendance = Attendance_Attendance_data.objects.filter(employee=employee, date=today).first()
-    has_checked_in = mark_attendance is not None and mark_attendance.check_in_time is not None
-    has_checked_out = mark_attendance is not None and mark_attendance.check_out_time is not None
-
-    # ➕ Add leave request form
+    has_checked_in = mark_attendance and mark_attendance.check_in_time
+    has_checked_out = mark_attendance and mark_attendance.check_out_time
     leave_form = LeaveRequestForm()
-
 
     if request.method == 'POST' and 'leave_request' in request.POST:
         leave_form = LeaveRequestForm(request.POST)
@@ -372,32 +363,36 @@ def dashboard(request):
             messages.success(request, 'Leave request submitted successfully!')
             return redirect('dashboard')
 
-    # Calculate working hours
+    # ✅ Handle shift selection
+    elif request.method == 'POST' and 'set_shift' in request.POST:
+        selected_shift = request.POST.get('shift_type')
+        if selected_shift:
+            attendance, created = Attendance_Attendance_data.objects.get_or_create(
+                employee=employee,
+                date=today,
+                defaults={'check_in_time': None}
+            )
+            attendance.shift_type = selected_shift
+            attendance.save()
+            messages.success(request, f"Shift set to {attendance.get_shift_type_display()}")
+            return redirect('dashboard')
+
+    # Working hours display
     working_hours_display = None
     if has_checked_in and has_checked_out:
         time_diff = (mark_attendance.check_out_time - mark_attendance.check_in_time).total_seconds() / 3600
         working_hours_display = calculate_working_hours(time_diff)
 
-    # Recent attendance
-    # Get selected month from GET params (format: "YYYY-MM")
+    # Monthly attendance
     selected_month = request.GET.get('month')
     today = date.today()
-
-    if selected_month:
-        selected_date = datetime.strptime(selected_month, "%Y-%m").date()
-    else:
-        selected_date = today.replace(day=1)
-
+    selected_date = datetime.strptime(selected_month, "%Y-%m").date() if selected_month else today.replace(day=1)
     start_date = selected_date.replace(day=1)
     end_date = (start_date + relativedelta(months=1)) - relativedelta(days=1)
-
-    # Fetch attendances for selected month only
     recent_attendances = Attendance_Attendance_data.objects.filter(
-        employee=employee,
-        date__range=(start_date, end_date)
+        employee=employee, date__range=(start_date, end_date)
     ).order_by('-date')
 
-    # Calculate working hours
     for record in recent_attendances:
         if record.check_in_time and record.check_out_time:
             diff_hours = (record.check_out_time - record.check_in_time).total_seconds() / 3600
@@ -405,26 +400,24 @@ def dashboard(request):
         else:
             record.working_hours_display = "0 hr 0 min"
 
-    # Month options for dropdown (current + past 2 months)
-    month_options = []
-    for i in range(3):
-        dt = today - relativedelta(months=i)
-        month_options.append({
-            "value": dt.strftime("%Y-%m"),
-            "label": dt.strftime("%B %Y")
-        })
-
-    
-
     # Announcements
     announcements = Announcement.objects.filter(is_active=True).order_by('-created_at')[:5]
     read_announcements = AnnouncementRead.objects.filter(user=request.user).values_list('announcement_id', flat=True)
     for ann in announcements:
         ann.is_read = ann.id in read_announcements
-
     unread_announcements = [ann for ann in announcements if not ann.is_read]
     for ann in unread_announcements:
         AnnouncementRead.objects.create(user=request.user, announcement=ann)
+
+    # Month dropdown
+    month_options = [
+        {"value": (today - relativedelta(months=i)).strftime("%Y-%m"),
+         "label": (today - relativedelta(months=i)).strftime("%B %Y")}
+        for i in range(3)
+    ]
+
+    # ✅ Shift display
+    shift_display = mark_attendance.get_shift_type_display() if mark_attendance and mark_attendance.shift_type else "Not Set"
 
     context = {
         'employee': employee,
@@ -437,11 +430,10 @@ def dashboard(request):
         'unread_count': len(unread_announcements),
         'leave_form': leave_form,
         'today_logs': today_logs,
-        "recent_attendances": recent_attendances,
         "month_options": month_options,
-        "selected_month": selected_month or today.strftime("%Y-%m")
+        "selected_month": selected_month or today.strftime("%Y-%m"),
+        "shift_display": shift_display,
     }
-
     return render(request, 'attendance/dashboard.html', context)
 
 
