@@ -169,6 +169,12 @@ def admin_dashboard(request):
     }
     return render(request, "admin_dashboard.html", context)
 
+from datetime import date, time
+from django.utils import timezone
+from django.shortcuts import render
+from operator import itemgetter
+from .models import Attendance_Employee_data, Attendance_Attendance_data, Attendance_LeaveRequest
+
 def dashboard_view(request):
     today = date.today()
     status_list = []
@@ -203,6 +209,14 @@ def dashboard_view(request):
         except Attendance_Employee_data.DoesNotExist:
             pass  # Log error or redirect if needed
 
+    # Define on-time thresholds per shift
+    shift_thresholds = {
+        'general': time(10, 30),
+        'morning': time(10, 0),
+        'evening': time(14, 30),
+        'both': time(10, 0)  # Or define more granular logic for both shifts
+    }
+
     all_employees = Attendance_Employee_data.objects.filter(user__isnull=False)
 
     for employee in all_employees:
@@ -214,8 +228,9 @@ def dashboard_view(request):
             to_date__gte=today
         ).first()
 
-        # Get shift type for the employee today
         shift_display = record.get_shift_type_display() if record and record.shift_type else "Not Set"
+        shift_key = record.shift_type if record and record.shift_type else None
+        on_time_threshold = shift_thresholds.get(shift_key)
 
         status = {
             "name": f"{user_obj.first_name} {user_obj.last_name}",
@@ -237,7 +252,8 @@ def dashboard_view(request):
                 check_out_ist = timezone.localtime(record.check_out_time)
                 status["check_out"] = check_out_ist.strftime('%I:%M %p')
 
-            if check_in_ist.time() > time(10, 30):
+            # Apply shift-specific on-time logic
+            if on_time_threshold and check_in_ist.time() > on_time_threshold:
                 status["color"] = "text-danger"
             else:
                 status["color"] = "text-success"
@@ -260,6 +276,7 @@ def dashboard_view(request):
         "has_checked_out": has_checked_out,
         "working_hours_display": working_hours_display
     })
+
 
 
 @staff_member_required
