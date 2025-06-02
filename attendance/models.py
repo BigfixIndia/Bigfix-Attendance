@@ -35,7 +35,7 @@ class Attendance_Employee_data(models.Model):
 
 class Attendance_Attendance_data(models.Model):
     employee = models.ForeignKey(Attendance_Employee_data, on_delete=models.CASCADE)
-    check_in_time = models.DateTimeField()
+    check_in_time = models.DateTimeField(null=True, blank=True)
     check_out_time = models.DateTimeField(null=True, blank=True)
     date = models.DateField()
     shift_type = models.CharField(max_length=10, choices=[

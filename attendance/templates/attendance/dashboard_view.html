@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="container mt-5">
-    <h2 class="fw-bold mb-4 text-center text-primary">📊 Work-nday Tracker - {{ today }}</h2>
+    <h2 class="fw-bold mb-4 text-center text-primary">📊 Work-day Tracker - {{ today }}</h2>
 
     <!-- Section: Employee Check-ins -->
     <div class="row">
@@ -21,6 +21,10 @@
                             {% if item.color == 'text-success' %}
                             <span class="badge bg-success ms-2">On Time</span>
                             {% endif %}
+                        </p>
+                        <p class="mb-2">
+                            <i class="bi bi-clock-history"></i>
+                            <strong>Shift:</strong> {{ item.shift }}
                         </p>
                         {% if item.check_out %}
                         <p class="mb-0">

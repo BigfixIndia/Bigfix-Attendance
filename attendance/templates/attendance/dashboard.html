@@ -1,12 +1,6 @@
 {% extends 'layouts/base.html' %}
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-12">
-        <h2 class="mb-4">
-            <i class="fas fa-tachometer-alt me-2"></i>Dashboard
-        </h2>
-    </div>
-</div>
+
 
 <div class="row">
     <!-- Employee Profile Card -->
@@ -41,72 +35,97 @@
     
     <!-- Today's Attendance Card -->
     <div class="col-md-8">
-    <div class="card">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Today's Attendance</h5>
+   <div class="card-body">
+
+    <!-- ✅ Show Selected Shift -->
+    <p><strong>Selected Shift:</strong> {{ shift_display }}</p>
+
+    <!-- ✅ Shift Selection Form -->
+    {% if not has_checked_in %}
+    <form method="post" action="{% url 'select_shift' %}">
+    {% csrf_token %}
+    <label><strong>Select Shift:</strong></label>
+    <select name="shift_type" class="form-control" required>
+        <option value="general">General</option>
+        <option value="morning">Morning</option>
+        <option value="evening">Evening</option>
+        <option value="both">Both</option>
+    </select>
+    <button type="submit" class="btn btn-sm btn-primary mt-2">Set Shift</button>
+</form>
+    {% endif %}
+
+    <!-- ✅ Check-In and Check-Out Logic -->
+    {% if has_checked_in %}
+        <div class="alert alert-success">
+            <i class="fas fa-check-circle me-2"></i>
+            You have checked in {{ today_attendance.check_in_time|time:"h:i A" }}
+        </div>
+
+        {% if has_checked_out %}
+            <div class="alert alert-info">
+                <i class="fas fa-sign-out-alt me-2"></i>
+                You have checked out at {{ today_attendance.check_out_time|time:"h:i A" }}<br>
+                <strong>Working Hours:</strong> {{ working_hours_display }}
+            </div>
+        {% else %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                You haven't checked out yet.
+            </div>
+            <a href="{% url 'scan_qr_code' %}" class="btn btn-primary mt-2">
+                <i class="fas fa-sign-out-alt me-2"></i>Check Out
+            </a>
+        {% endif %}
+
+    {% else %}
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            You haven't checked in yet.
+        </div>
+
+        {% if shift_display != "Not Set" %}
+            <a href="{% url 'scan_qr_code' %}" class="btn btn-success mt-2">
+                <i class="fas fa-sign-in-alt me-2"></i>Check In
+            </a>
+        {% else %}
+            <button class="btn btn-secondary mt-2" disabled>
+                Please select a shift before checking in
+            </button>
+        {% endif %}
+    {% endif %}
+             <!-- Announcements-->
+     <div class="card mt-4 shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">📢 Announcements</h5>
+          {% if unread_count %}
+            <span class="badge bg-warning text-dark">{{ unread_count }} New</span>
+          {% endif %}
         </div>
         <div class="card-body">
-
-            <!-- ✅ Show Selected Shift -->
-            <p><strong>Selected Shift:</strong> {{ shift_display }}</p>
-
-            <!-- ✅ Shift Selection Form (if not checked in) -->
-            {% if not has_checked_in %}
-                <form method="post" class="mb-3">
-                    {% csrf_token %}
-                    <input type="hidden" name="set_shift" value="1">
-                    <label><strong>Select Shift:</strong></label>
-                    <select name="shift_type" class="form-control" required>
-                        <option value="general" {% if shift_display == "General" %}selected{% endif %}>General</option>
-                        <option value="morning" {% if shift_display == "Morning" %}selected{% endif %}>Morning</option>
-                        <option value="evening" {% if shift_display == "Evening" %}selected{% endif %}>Evening</option>
-                        <option value="both" {% if shift_display == "Both" %}selected{% endif %}>Both</option>
-                    </select>
-                    <button type="submit" class="btn btn-sm btn-primary mt-2">Set Shift</button>
-                </form>
-            {% endif %}
-
-            {% if has_checked_in %}
-                <div class="alert alert-success">
-                    <i class="fas fa-check-circle me-2"></i>
-                    You have checked in at {{ today_attendance.check_in_time|time:"h:i A" }}
-                </div>
-
-                {% if has_checked_out %}
-                    <div class="alert alert-info">
-                        <i class="fas fa-sign-out-alt me-2"></i>
-                        You have checked out at {{ today_attendance.check_out_time|time:"h:i A" }}
-                        <br>
-                        <strong>Working Hours:</strong> {{ working_hours_display }}
-                    </div>
-                {% else %}
-                    <div class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        You haven't checked out yet.
-                    </div>
-                    <a href="{% url 'scan_qr_code' %}" class="btn btn-primary">
-                        <i class="fas fa-sign-out-alt me-2"></i>Check Out
-                    </a>
-                {% endif %}
-
-            {% else %}
-                <div class="alert alert-warning">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    You haven't checked in yet.
-                </div>
-
-                {% if shift_display != "Not Set" %}
-                    <a href="{% url 'scan_qr_code' %}" class="btn btn-success mt-2">
-                        <i class="fas fa-sign-in-alt me-2"></i>Check In
-                    </a>
-                {% else %}
-                    <button class="btn btn-secondary mt-2" disabled>
-                        Please select a shift before checking in
-                    </button>
-                {% endif %}
-            {% endif %}
+          {% if announcements %}
+            <ul class="list-group list-group-flush">
+              {% for announcement in announcements %}
+                <li class="list-group-item">
+                  <div class="d-flex justify-content-between">
+                    <strong>{{ announcement.title }}</strong>
+                    {% if not announcement.is_read %}
+                      <span class="badge bg-success">New</span>
+                    {% endif %}
+                  </div>
+                  <small class="text-muted">{{ announcement.created_at|date:"M d, Y h:i A" }}</small>
+                  <p class="mb-0">{{ announcement.message }}</p>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="text-muted">No announcements at the moment.</p>
+          {% endif %}
         </div>
+      </div>
     </div>
+
+
 </div>
 </div>
 {% endblock %}
