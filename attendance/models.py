@@ -14,6 +14,18 @@ class Attendance_Employee_data(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    employment_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('full_time', 'Full-time'),
+            ('part_time', 'Part-time')
+        ],
+        default='full_time')
+    EMPLOYMENT_CHOICES = [
+    ('full_time', 'Full-time'),
+    ('part_time', 'Part-time'),
+]
+    employment_type = models.CharField(max_length=20, choices=EMPLOYMENT_CHOICES, default='full_time')
 
     class Meta:
         db_table = "attendance_employee_data"
@@ -23,15 +35,22 @@ class Attendance_Employee_data(models.Model):
 
 class Attendance_Attendance_data(models.Model):
     employee = models.ForeignKey(Attendance_Employee_data, on_delete=models.CASCADE)
-    check_in_time = models.DateTimeField()
+    check_in_time = models.DateTimeField(null=True, blank=True)
     check_out_time = models.DateTimeField(null=True, blank=True)
     date = models.DateField()
+    shift_type = models.CharField(max_length=10, choices=[
+        ('general', 'General'),
+        ('morning', 'Morning'),
+        ('evening', 'Evening'),
+        ('both', 'Both')
+    ], default='general')
     status = models.CharField(max_length=20, choices=[
         ('present', 'Present'),
         ('absent', 'Absent'),
         ('late', 'Late'),
         ('half_day', 'Half Day'),
     ], default='present')
+    
     working_hours = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     overtime_hours = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     notes = models.TextField(blank=True, null=True)
@@ -40,32 +59,51 @@ class Attendance_Attendance_data(models.Model):
         db_table = "attendance_attendance_data"
         #unique_together = ['employee', 'date']
 
+    def get_expected_hours(self):
+    
+      return {
+        'general': 8,
+        'morning': 4,
+        'evening': 4,
+        'both': 8
+       }.get(self.shift_type, 8) 
+    
+    
+
     def __str__(self):
         return f"{self.employee.user.first_name} - {self.date}"
 
     def save(self, *args, **kwargs):
-        if not self.date:
-            self.date = timezone.now().date()
+     if not self.date:
+        self.date = timezone.now().date()
 
-        if self.check_in_time and self.check_out_time:
-            # Calculate working hours
-            time_diff = self.check_out_time - self.check_in_time
-            hours = time_diff.total_seconds() / 3600
-            self.working_hours = round(hours, 2)
+     if self.check_in_time and self.check_out_time:
+        # Calculate working hours
+        time_diff = self.check_out_time - self.check_in_time
+        hours = time_diff.total_seconds() / 3600
+        self.working_hours = round(hours, 2)
 
-            # Set status based on working hours
-            if hours < 4:
-                self.status = 'half_day'
-            else:
-                self.status = 'present'
+        expected_hours = self.get_expected_hours()
 
-            # Overtime
-            if self.working_hours > 8:
-                self.overtime_hours = self.working_hours - 8
-            else:
-                self.overtime_hours = 0
+        # Set status
+        if hours < expected_hours * 0.5:
+            self.status = 'half_day'
+        elif hours < expected_hours:
+            self.status = 'late'
+        else:
+            self.status = 'present'
 
-        super().save(*args, **kwargs)
+        # ✅ SAFELY fetch employment type:
+        from .models import Attendance_Employee_data
+        employee_type = Attendance_Employee_data.objects.get(id=self.employee.id).employment_type
+
+        if self.working_hours > expected_hours and employee_type == 'full_time':
+            self.overtime_hours = self.working_hours - expected_hours
+        else:
+            self.overtime_hours = 0
+
+     super().save(*args, **kwargs)
+
 
 class QR_Code(models.Model):
     location = models.CharField(max_length=100, default="Office", unique=True)

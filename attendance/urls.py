@@ -10,6 +10,7 @@ urlpatterns = [
     path('', views.index, name='index'),
     path('register/', views.register, name='register'),
     path('dashboard/', views.dashboard, name='dashboard'),
+    path('select-shift/', views.select_shift, name='select_shift'),
     path('scan-qr/', views.scan_qr_code, name='scan_qr_code'),
     path("process_qr/", views.process_qr_scan, name="process_qr_scan"),  
     path('mark-attendance/', views.mark_attendance, name='mark_attendance'),
