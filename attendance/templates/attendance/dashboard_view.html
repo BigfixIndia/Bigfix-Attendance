@@ -1,28 +1,9 @@
 {% extends 'base.html' %}
+
 {% block content %}
 
-<div class="container mt-4">
-  <!-- Overview Button -->
-  <div class="d-flex justify-content-start mb-4">
-    <button class="btn btn-outline-primary shadow-sm">
-      <i class="bi bi-bar-chart-line-fill"></i> Overview &nbsp;|&nbsp;
-      🟦 Leave: {{ leave_list|length }} &nbsp;|&nbsp;
-      ✅ Present: {{ present_count }} &nbsp;|&nbsp;
-      ❌ Absent: {{ absent_list|length }}
-    </button>
-  </div>
 
-  <!-- 🟦 Leave Section -->
-  {% if leave_list %}
-  <h4 class="fw-bold text-primary mb-3">🟦 On Leave</h4>
-  <div class="row mb-5">
-    {% for emp in leave_list %}
-    <div class="col-md-6 col-lg-4 mb-4">
-      <div class="card shadow border-0 bg-light">
-        <div class="card-header bg-primary text-white">
-          <h5 class="mb-0 fw-semibold">{{ emp.employee__name }}</h5>
-
-<div class="container mt-5">
+{% comment %}
     <h2 class="fw-bold mb-4 text-center text-primary">📊 Work-day Tracker - {{ today }}</h2>
 
     <!-- Section: Employee Check-ins -->
@@ -43,10 +24,6 @@
                             <span class="badge bg-success ms-2">On Time</span>
                             {% endif %}
                         </p>
-                        <p class="mb-2">
-                            <i class="bi bi-clock-history"></i>
-                            <strong>Shift:</strong> {{ item.shift }}
-                        </p>
                         {% if item.check_out %}
                         <p class="mb-0">
                             <i class="bi bi-door-closed-fill"></i> 
@@ -64,18 +41,83 @@
         {% endif %}
     </div>
 
+    
+
+    <div class="container mt-5">
+    <!-- 🟦 Leave Section -->
+    {% if leave_list %}
+    <h4 class="fw-bold text-primary mb-3">🟦 On Leave</h4>
+    <div class="row mb-5">
+        {% for emp in leave_list %}
+        <div class="col-md-6 col-lg-4 mb-4">
+        <div class="card shadow border-0 bg-light">
+            <div class="card-header bg-primary text-white">
+            <h5 class="mb-0 fw-semibold">{{ emp.employee__name }}</h5>
+            </div>
+            <div class="card-body">
+            <p class="mb-0"><span class="badge bg-primary">Leave</span></p>
+            </div>
+        </div>
+        </div>
+
+        <!-- Divider -->
+        <hr class="my-5">
+
+        <!-- Section: HR Overview -->
+        <div class="card shadow border-info">
+            <div class="card-body">
+                <h4 class="card-title text-info fw-bold mb-3">
+                    <i class="bi bi-clipboard-check-fill"></i> HR Attendance Overview
+                </h4>
+                <p class="fs-5"><strong>✅ Present Today:</strong> {{ present_count }}</p>
+
+                {% if leave_list %}
+                    <p class="mt-4 fw-semibold text-primary">🟦 On Leave:</p>
+                    <ul class="list-group mb-4">
+                        {% for emp in leave_list %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ emp.employee__name }}
+                            <span class="badge bg-primary">Leave</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+
+                {% if absent_list %}
+                    <p class="mt-4 fw-semibold text-danger">❌ Absent:</p>
+                    <ul class="list-group">
+                        {% for emp in absent_list %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            {{ emp.name }}
+                            <span class="badge bg-danger">Absent</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    </div>
+{% endcomment %}
+
+    <h2 class="fw-bold mb-4 text-center text-primary">📊 Work-day Tracker - {{ today }}</h2>
     <!-- Divider -->
-    <hr class="my-5">
-
+    <div class="container mt-4">
+    <!-- Overview Button -->
+        <div class="d-flex justify-content-start mb-4">
+            <button class="btn btn-outline-primary shadow-sm">
+                <i class="bi bi-bar-chart-line-fill"></i> Overview &nbsp;|&nbsp;
+                🟦 Leave: {{ leave_list|length }} &nbsp;|&nbsp;
+                ✅ Present: {{ present_count }} &nbsp;|&nbsp;
+                ❌ Absent: {{ absent_list|length }}
+            </button>
+        </div>
+    </div>
     <!-- Section: HR Overview -->
-    <div class="card shadow border-info">
-        <div class="card-body">
-            <h4 class="card-title text-info fw-bold mb-3">
-                <i class="bi bi-clipboard-check-fill"></i> HR Attendance Overview
-            </h4>
-            <p class="fs-5"><strong>✅ Present Today:</strong> {{ present_count }}</p>
-
-            {% if leave_list %}
+    
+        {% if leave_list %}
+        <div class="card shadow border-info">
+            <div class="card-body">
                 <p class="mt-4 fw-semibold text-primary">🟦 On Leave:</p>
                 <ul class="list-group mb-4">
                     {% for emp in leave_list %}
@@ -85,8 +127,55 @@
                     </li>
                     {% endfor %}
                 </ul>
-            {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        <div class="card shadow border-info">
+            <div class="card-body">
+            <p class="fs-5"><strong>✅ Present Today:</strong> {{ present_count }}</p>
 
+            
+            <div class="row">
+            {% if status_list %}
+                {% for item in status_list %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card shadow border-0 bg-light">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0 fw-semibold">{{ item.name }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-2">
+                                <i class="bi bi-door-open-fill"></i> 
+                                <strong>Check-in:</strong> 
+                                <span class="{{ item.color }}">{{ item.check_in|default:"--" }}</span>
+                                {% if item.color == 'text-success' %}
+                                <span class="badge bg-success ms-2">On Time</span>
+                                {% endif %}
+                            </p>
+                            {% if item.check_out %}
+                            <p class="mb-2">
+                                <i class="bi bi-door-closed-fill"></i> 
+                                <strong>Check-out:</strong> {{ item.check_out }}
+                            </p>
+                            {% endif %}
+                            <p class="mb-2">
+                                <i class="bi bi-clock-history"></i> 
+                                <strong>Shift:</strong> {{ item.shift }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-12 text-center">
+                    <div class="alert alert-warning">🚫 No employees have checked in yet.</div>
+                </div>
+            {% endif %}
+            </div>
+            </div>
+        </div>
+    <div class="card shadow border-info">
+        <div class="card-body">
             {% if absent_list %}
                 <p class="mt-4 fw-semibold text-danger">❌ Absent:</p>
                 <ul class="list-group">
@@ -98,57 +187,8 @@
                     {% endfor %}
                 </ul>
             {% endif %}
->>>>>>> main
         </div>
-        <div class="card-body">
-          <p class="mb-0"><span class="badge bg-primary">Leave</span></p>
-        </div>
-      </div>
     </div>
-    {% endfor %}
-  </div>
-  {% endif %}
 
-  <!-- ✅ Present Section -->
-  {% if status_list %}
-  <h4 class="fw-bold text-success mb-3">✅ Present</h4>
-  <div class="row mb-5">
-    {% for item in status_list %}
-    <div class="col-md-6 col-lg-4 mb-4">
-      <div class="card shadow border-0 bg-light">
-        <div class="card-header bg-success text-white">
-          <h5 class="mb-0 fw-semibold">{{ item.name }}</h5>
-        </div>
-        <div class="card-body">
-          <p><i class="bi bi-door-open-fill"></i> <strong>Check-in:</strong> {{ item.check_in|default:"--" }}</p>
-          {% if item.check_out %}
-          <p><i class="bi bi-door-closed-fill"></i> <strong>Check-out:</strong> {{ item.check_out }}</p>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
 
-  <!-- ❌ Absent Section -->
-  {% if absent_list %}
-  <h4 class="fw-bold text-danger mb-3">❌ Absent</h4>
-  <div class="row">
-    {% for emp in absent_list %}
-    <div class="col-md-6 col-lg-4 mb-4">
-      <div class="card shadow border-0 bg-light">
-        <div class="card-header bg-danger text-white">
-          <h5 class="mb-0 fw-semibold">{{ emp.name }}</h5>
-        </div>
-        <div class="card-body">
-          <p class="mb-0"><span class="badge bg-danger">Absent</span></p>
-        </div>
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-</div>
 {% endblock %}
-
