@@ -4,25 +4,6 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.conf import settings
 from datetime import date
-from django.db import models
-from django.contrib.auth.models import User
-
-class ReportComment(models.Model):
-    report = models.ForeignKey('DailyReport', on_delete=models.CASCADE, related_name='comments')
-    name = models.CharField(max_length=100)
-    comment = models.TextField()
-    created_at = models.DateTimeField(auto_now_add=True)
-
-class ReportReaction(models.Model):
-    REACTIONS = (
-        ('like', '👍'),
-        ('love', '❤️'),
-        ('fire', '🔥'),
-    )
-    report = models.ForeignKey('DailyReport', on_delete=models.CASCADE, related_name='reactions')
-    reaction_type = models.CharField(choices=REACTIONS, max_length=10)
-    ip_address = models.GenericIPAddressField()  # Optional: Prevent multiple reacts from same IP
-    reacted_at = models.DateTimeField(auto_now_add=True)
 
 class Attendance_Employee_data(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
