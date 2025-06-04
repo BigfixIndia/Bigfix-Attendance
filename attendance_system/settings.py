@@ -174,10 +174,6 @@ LOGIN_REDIRECT_URL = 'dashboard'  # Change 'dashboard' to your actual URL name
 LOGOUT_REDIRECT_URL = 'login'
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 
-# ✅ Ensure media files are served during development
-from django.conf import settings
-from django.conf.urls.static import static
-
 
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
