@@ -1,7 +1,6 @@
 {% extends 'layouts/base.html' %}
 {% block content %}
 
-
 <div class="row">
     <!-- Employee Profile Card -->
     <div class="col-md-4">
@@ -9,21 +8,16 @@
             <div class="card-header">
                 <h5 class="mb-0"><i class="fas fa-user me-2"></i>Employee Profile</h5>
             </div>
-            <div class="card-body text-center">.
-                <!--if employee.profile_picture 
-                    <img src=" employee.profile_picture.url " alt="Profile Picture" class="img-fluid rounded-circle mb-3" style="width: 120px; height: 120px; object-fit: cover;">
-                 else -->
-                    <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 120px; height: 120px;">
-                        <i class="fas fa-user fa-4x text-secondary"></i>
-                    </div>
-                
-                
+            <div class="card-body text-center">
+                <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center mb-3" style="width: 120px; height: 120px;">
+                    <i class="fas fa-user fa-4x text-secondary"></i>
+                </div>
+
                 <h5>{{ employee.user.first_name }} {{ employee.user.last_name }}</h5>
                 <p class="text-muted mb-2">{{ employee.position }}</p>
                 <p class="badge bg-primary">{{ employee.department }}</p>
                 
                 <hr>
-                
                 <div class="text-start">
                     <p><strong><i class="fas fa-id-card me-2"></i>Employee ID:</strong> {{ employee.employee_id }}</p>
                     <p><strong><i class="fas fa-envelope me-2"></i>Email:</strong> {{ employee.user.email }}</p>
@@ -32,98 +26,171 @@
             </div>
         </div>
     </div>
-    
-    <!-- Today's Attendance Card -->
+
+    <!-- Main Dashboard Card -->
     <div class="col-md-8">
-   <div class="card-body">
-
-    <!-- ✅ Show Selected Shift -->
-    <p><strong>Selected Shift:</strong> {{ shift_display }}</p>
-
-    <!-- ✅ Shift Selection Form -->
-    {% if not has_checked_in %}
-    <form method="post" action="{% url 'select_shift' %}">
-    {% csrf_token %}
-    <label><strong>Select Shift:</strong></label>
-    <select name="shift_type" class="form-control" required>
-        <option value="general">General</option>
-        <option value="morning">Morning</option>
-        <option value="evening">Evening</option>
-        <option value="both">Both</option>
-    </select>
-    <button type="submit" class="btn btn-sm btn-primary mt-2">Set Shift</button>
-</form>
-    {% endif %}
-
-    <!-- ✅ Check-In and Check-Out Logic -->
-    {% if has_checked_in %}
-        <div class="alert alert-success">
-            <i class="fas fa-check-circle me-2"></i>
-            You have checked in {{ today_attendance.check_in_time|time:"h:i A" }}
-        </div>
-
-        {% if has_checked_out %}
-            <div class="alert alert-info">
-                <i class="fas fa-sign-out-alt me-2"></i>
-                You have checked out at {{ today_attendance.check_out_time|time:"h:i A" }}<br>
-                <strong>Working Hours:</strong> {{ working_hours_display }}
-            </div>
-        {% else %}
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle me-2"></i>
-                You haven't checked out yet.
-            </div>
-            <a href="{% url 'scan_qr_code' %}" class="btn btn-primary mt-2">
-                <i class="fas fa-sign-out-alt me-2"></i>Check Out
-            </a>
-        {% endif %}
-
-    {% else %}
-        <div class="alert alert-warning">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            You haven't checked in yet.
-        </div>
-
-        {% if shift_display != "Not Set" %}
-            <a href="{% url 'scan_qr_code' %}" class="btn btn-success mt-2">
-                <i class="fas fa-sign-in-alt me-2"></i>Check In
-            </a>
-        {% else %}
-            <button class="btn btn-secondary mt-2" disabled>
-                Please select a shift before checking in
-            </button>
-        {% endif %}
-    {% endif %}
-             <!-- Announcements-->
-     <div class="card mt-4 shadow-sm">
-        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-          <h5 class="mb-0">📢 Announcements</h5>
-          {% if unread_count %}
-            <span class="badge bg-warning text-dark">{{ unread_count }} New</span>
-          {% endif %}
-        </div>
         <div class="card-body">
-          {% if announcements %}
-            <ul class="list-group list-group-flush">
-              {% for announcement in announcements %}
-                <li class="list-group-item">
-                  <div class="d-flex justify-content-between">
-                    <strong>{{ announcement.title }}</strong>
-                    {% if not announcement.is_read %}
-                      <span class="badge bg-success">New</span>
+
+            <!-- Shift Info -->
+            <p><strong>Selected Shift:</strong> {{ shift_display }}</p>
+
+            {% if not has_checked_in %}
+                <form method="post" action="{% url 'select_shift' %}">
+                    {% csrf_token %}
+                    <label><strong>Select Shift:</strong></label>
+                    <select name="shift_type" class="form-control" required>
+                        <option value="general">General</option>
+                        <option value="morning">Morning</option>
+                        <option value="evening">Evening</option>
+                        <option value="both">Both</option>
+                    </select>
+                    <button type="submit" class="btn btn-sm btn-primary mt-2">Set Shift</button>
+                </form>
+            {% endif %}
+
+            {% if has_checked_in %}
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    You have checked in at {{ mark_attendance.check_in_time|time:"h:i A" }}
+                </div>
+
+                {% if show_report_form %}
+                    <!-- Report Form -->
+                    <div class="card mt-4">
+                        <div class="card-header bg-info text-white">
+                            <strong>📝Daily Work Report</strong>
+                        </div>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                {{ daily_report_form.as_p }}
+                                <button type="submit" name="submit_report" class="btn btn-success mt-2">
+                                    <i class="fas fa-paper-plane me-2"></i>Submit Report
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                {% elif report_submitted and not has_checked_out %}
+                    <!-- Check-out button after report -->
+                    <div class="alert alert-info mt-3">
+                        ✅ Report Submitted! Now you can check out.
+                    </div>
+                    <a href="{% url 'scan_qr_code' %}" class="btn btn-primary mt-2">
+                        <i class="fas fa-sign-out-alt me-2"></i>Check Out
+                    </a>
+                {% endif %}
+
+                {% if has_checked_out %}
+                    <!-- Final Summary -->
+                    <div class="alert alert-secondary mt-3">
+                        <i class="fas fa-sign-out-alt me-2"></i>
+                        You have checked out at {{ mark_attendance.check_out_time|time:"h:i A" }}<br>
+                        <strong>Working Hours:</strong> {{ working_hours_display }}
+                    </div>
+                {% endif %}
+
+                {% if report_submitted %}
+                    <!-- Show Today’s Report -->
+                    <div class="card mt-3">
+                        <div class="card-header bg-success text-white">
+                            <strong>📄 Today's Submitted Report</strong>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Date:</strong> {{ mark_attendance.date }}</p>
+                            <p>{{ today_report.report_text }}</p>
+                        </div>
+                    </div>
+                {% endif %}
+
+            {% else %}
+                <!-- Not checked in -->
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    You haven't checked in yet.
+                </div>
+
+                {% if shift_display != "Not Set" %}
+                    <a href="{% url 'scan_qr_code' %}" class="btn btn-success mt-2">
+                        <i class="fas fa-sign-in-alt me-2"></i>Check In
+                    </a>
+                {% else %}
+                    <button class="btn btn-secondary mt-2" disabled>
+                        Please select a shift before checking in
+                    </button>
+                {% endif %}
+            {% endif %}
+
+            <!-- Announcements -->
+            <div class="card mt-4 shadow-sm">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">📢 Announcements</h5>
+                    {% if unread_count %}
+                        <span class="badge bg-warning text-dark">{{ unread_count }} New</span>
                     {% endif %}
-                  </div>
-                  <small class="text-muted">{{ announcement.created_at|date:"M d, Y h:i A" }}</small>
-                  <p class="mb-0">{{ announcement.message }}</p>
-                </li>
-              {% endfor %}
-            </ul>
-          {% else %}
-            <p class="text-muted">No announcements at the moment.</p>
-          {% endif %}
-        </div>
-      </div>
+                </div>
+                <div class="card-body">
+                    {% if announcements %}
+                        <ul class="list-group list-group-flush">
+                            {% for announcement in announcements %}
+                                <li class="list-group-item">
+                                    <div class="d-flex justify-content-between">
+                                        <strong>{{ announcement.title }}</strong>
+                                        {% if not announcement.is_read %}
+                                            <span class="badge bg-success">New</span>
+                                        {% endif %}
+                                    </div>
+                                    <small class="text-muted">{{ announcement.created_at|date:"M d, Y h:i A" }}</small>
+                                    <p class="mb-0">{{ announcement.message }}</p>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted">No announcements at the moment.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- 📄 Past Reports Section -->
+<div class="card mt-4">
+    <div class="card-header bg-secondary text-white">
+        <strong>📄 Past Daily Reports</strong>
     </div>
+    <div class="card-body">
+        <!-- Dropdown for selecting a report date -->
+        <select id="reportDateDropdown" class="form-select mb-3" onchange="toggleReportDisplay(this.value)">
+            <option value="">-- Select Date --</option>  <!-- Default option -->
+            {% for report in past_reports %}
+                {% if report.attendance and report.attendance.date %}
+                    <option value="report_{{ report.id }}">
+                        {{ report.attendance.date|date:"M d, Y" }}
+                    </option>
+                {% endif %}
+            {% endfor %}
+        </select>
+
+        <!-- Display each report (initially hidden) -->
+        {% for report in past_reports %}
+            {% if report.attendance and report.attendance.date %}
+                <div class="report-text" id="report_{{ report.id }}" style="display: none;">
+                    <div class="alert alert-light border">
+                        <strong>Date:</strong> {{ report.attendance.date|date:"M d, Y" }}<br>
+                        <strong>Report:</strong><br>{{ report.report_text }}
+                    </div>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ✅ JavaScript to toggle report visibility -->
+<script>
+    function toggleReportDisplay(id) {
+        document.querySelectorAll('.report-text').forEach(el => el.style.display = 'none');
+        if (id && document.getElementById(id)) {
+            document.getElementById(id).style.display = 'block';
+        }
+    }
+</script>
 
 
 </div>

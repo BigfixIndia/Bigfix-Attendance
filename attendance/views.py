@@ -40,7 +40,8 @@ from datetime import timezone
 from django.utils import timezone
 from .models import Announcement
 from .models import AnnouncementRead
-from .forms import LeaveRequestForm
+from .forms import LeaveRequestForm 
+from .forms import DailyReportForm
 from .models import Attendance_LeaveRequest
 from .models import Attendance_Log
 from datetime import date
@@ -53,6 +54,8 @@ from django.contrib.auth.decorators import user_passes_test
 from django.db.models import Prefetch
 from calendar import monthrange
 from dateutil.relativedelta import relativedelta
+from .forms import DailyReportForm
+from .models import DailyReport
 
 
 
@@ -369,15 +372,13 @@ def dashboard(request):
     today = timezone.now().date()
     employee = get_object_or_404(Attendance_Employee_data, user=request.user)
 
-    # ✅ Get today's attendance record
     mark_attendance = Attendance_Attendance_data.objects.filter(employee=employee, date=today).first()
     has_checked_in = bool(mark_attendance and mark_attendance.check_in_time)
     has_checked_out = bool(mark_attendance and mark_attendance.check_out_time)
 
-    # ✅ Attendance logs
     today_logs = Attendance_Log.objects.filter(employee=employee, timestamp__date=today).order_by('timestamp')
 
-    # ✅ Leave request handling
+    # Leave Form
     leave_form = LeaveRequestForm()
     if request.method == 'POST' and 'leave_request' in request.POST:
         leave_form = LeaveRequestForm(request.POST)
@@ -388,8 +389,8 @@ def dashboard(request):
             messages.success(request, 'Leave request submitted successfully!')
             return redirect('dashboard')
 
-    # ✅ Handle shift selection before check-in
-    elif request.method == 'POST' and 'set_shift' in request.POST:
+    # Shift Selection
+    if request.method == 'POST' and 'set_shift' in request.POST:
         selected_shift = request.POST.get('shift_type')
         if selected_shift:
             attendance, created = Attendance_Attendance_data.objects.get_or_create(
@@ -405,16 +406,16 @@ def dashboard(request):
                 messages.warning(request, "Shift can't be changed after check-in.")
             return redirect('dashboard')
 
-    # ✅ Working hours display
+    # Working hours calculation
     working_hours_display = None
     if has_checked_in and has_checked_out:
         time_diff = (mark_attendance.check_out_time - mark_attendance.check_in_time).total_seconds() / 3600
         working_hours_display = calculate_working_hours(time_diff)
 
-    # ✅ Monthly attendance summary
+    # Monthly Attendance Summary
     selected_month = request.GET.get('month')
-    today = date.today()
-    selected_date = datetime.strptime(selected_month, "%Y-%m").date() if selected_month else today.replace(day=1)
+    today_obj = date.today()
+    selected_date = datetime.strptime(selected_month, "%Y-%m").date() if selected_month else today_obj.replace(day=1)
     start_date = selected_date.replace(day=1)
     end_date = (start_date + relativedelta(months=1)) - relativedelta(days=1)
 
@@ -429,7 +430,7 @@ def dashboard(request):
         else:
             record.working_hours_display = "0 hr 0 min"
 
-    # ✅ Announcements
+    # Announcements
     announcements = Announcement.objects.filter(is_active=True).order_by('-created_at')[:5]
     read_announcements = AnnouncementRead.objects.filter(user=request.user).values_list('announcement_id', flat=True)
     for ann in announcements:
@@ -438,17 +439,38 @@ def dashboard(request):
     for ann in unread_announcements:
         AnnouncementRead.objects.create(user=request.user, announcement=ann)
 
-    # ✅ Month dropdown options
     month_options = [
-        {"value": (today - relativedelta(months=i)).strftime("%Y-%m"),
-         "label": (today - relativedelta(months=i)).strftime("%B %Y")}
+        {"value": (today_obj - relativedelta(months=i)).strftime("%Y-%m"),
+         "label": (today_obj - relativedelta(months=i)).strftime("%B %Y")}
         for i in range(3)
     ]
 
-    # ✅ Shift display logic
     shift_display = mark_attendance.get_shift_type_display() if mark_attendance and mark_attendance.shift_type else "Not Set"
 
-    # ✅ Context to template
+    # Daily Report
+    daily_report_form = DailyReportForm()
+    show_report_form = False
+    report_submitted = False
+    today_report = None
+
+    if request.method == 'POST' and 'submit_report' in request.POST:
+       daily_report_form = DailyReportForm(request.POST)
+    if daily_report_form.is_valid():
+        report = daily_report_form.save(commit=False)
+        report.attendance = mark_attendance
+        report.save()
+        report_submitted = True
+        show_report_form = False
+        today_report = report
+    else:
+        today_report = DailyReport.objects.filter(attendance=mark_attendance).first()
+        report_submitted = today_report is not None
+        show_report_form = not report_submitted
+    
+    # ✅ Past Reports Queryset - outside context
+    past_reports = DailyReport.objects.filter(attendance__employee=employee).exclude(attendance=mark_attendance).select_related('attendance').order_by('-attendance__date')[:30]
+
+    # Final context (✅ always defined)
     context = {
         'employee': employee,
         'mark_attendance': mark_attendance,
@@ -461,11 +483,18 @@ def dashboard(request):
         'leave_form': leave_form,
         'today_logs': today_logs,
         'month_options': month_options,
-        'selected_month': selected_month or today.strftime("%Y-%m"),
+        'selected_month': selected_month or today_obj.strftime("%Y-%m"),
         'shift_display': shift_display,
+        'daily_report_form': daily_report_form,
+        'show_report_form': show_report_form,
+        'report_submitted': report_submitted,
+        'today_report': today_report,
+        'past_reports': past_reports,
+          
     }
 
     return render(request, 'attendance/dashboard.html', context)
+
 
 @login_required
 def select_shift(request):

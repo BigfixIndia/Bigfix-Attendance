@@ -3,6 +3,15 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from .models import  Attendance_Employee_data, Attendance_Attendance_data
 from .models import Attendance_LeaveRequest
+from .models import DailyReport
+
+class DailyReportForm(forms.ModelForm):
+    class Meta:
+        model = DailyReport
+        fields = ['report_text']
+        widgets = {
+            'report_text': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Write your daily report...'}),
+        }
 
 class UserRegistrationForm(UserCreationForm):
     email = forms.EmailField(required=True)

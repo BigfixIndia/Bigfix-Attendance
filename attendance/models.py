@@ -104,6 +104,18 @@ class Attendance_Attendance_data(models.Model):
 
      super().save(*args, **kwargs)
 
+class DailyReport(models.Model):
+    attendance = models.OneToOneField(Attendance_Attendance_data, on_delete=models.CASCADE)
+    report_text = models.TextField()
+    submitted_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "daily_report"
+        ordering = ['-attendance__date', '-submitted_at']
+
+    def __str__(self):
+        return f"{self.attendance.employee.user.username} - {self.attendance.date}"
+
 
 class QR_Code(models.Model):
     location = models.CharField(max_length=100, default="Office", unique=True)

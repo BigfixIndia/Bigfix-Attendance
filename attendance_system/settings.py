@@ -91,12 +91,15 @@ LOGOUT_REDIRECT_URL = 'login'  # or any other URL name or path
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
+        'ENGINE': 'mysql.connector.django',
         'HOST': 'bigfixdb.mysql.database.azure.com',
         'USER': 'dbadmin',
         'PASSWORD': 'Ud4Fn685jQn2A9XGyiYx',
         'NAME': 'Bigfix',
         'PORT': '3306',
+        'OPTIONS': {
+            'ssl_ca': os.path.join(BASE_DIR, 'certs', 'DigiCertGlobalRootG2.crt.pem'),
+        }
     }
 }
 
