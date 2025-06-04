@@ -50,12 +50,13 @@ from .models import Holiday
 from operator import itemgetter
 from datetime import date, timedelta
 from django.contrib.auth.decorators import user_passes_test
+from django.db.models import Count, Q
 
 from django.db.models import Prefetch
 from calendar import monthrange
 from dateutil.relativedelta import relativedelta
 from .forms import DailyReportForm
-from .models import DailyReport
+from .models import DailyReport, ReportComment, ReportReaction
 
 
 
@@ -494,6 +495,59 @@ def dashboard(request):
     }
 
     return render(request, 'attendance/dashboard.html', context)
+
+def public_reports(request):
+    from_date = request.GET.get('from')
+    to_date = request.GET.get('to')
+
+    reports = DailyReport.objects.select_related('attendance__employee') \
+        .prefetch_related('reactions') \
+        .order_by('-attendance__date')
+    #reports = DailyReport.objects.select_related('attendance__employee').all().order_by('-attendance__date')
+
+    if from_date and to_date:
+        reports = reports.filter(
+            attendance__date__range=[from_date, to_date]
+        )
+
+    # Add like/dislike count manually to avoid template errors
+    for report in reports:
+        report.like_count = report.reactions.filter(reaction_type='like').count()
+        report.love_count = report.reactions.filter(reaction_type='love').count()
+        report.fire_count = report.reactions.filter(reaction_type='fire').count()
+
+    context = {
+        'reports': reports,
+        'from_date': from_date,
+        'to_date': to_date,
+    }
+    return render(request, 'attendance/public_reports.html', context)
+
+
+@csrf_exempt
+def submit_comment(request, report_id):
+    if request.method == 'POST':
+        report = get_object_or_404(DailyReport, id=report_id)
+        name = request.POST.get('name', 'Anonymous')
+        comment = request.POST.get('comment')
+        if comment:
+            ReportComment.objects.create(report=report, name=name, comment=comment)
+    return redirect('public_reports')
+
+@csrf_exempt
+def submit_reaction(request, report_id, reaction_type):
+    report = get_object_or_404(DailyReport, id=report_id)
+    ip = get_client_ip(request)
+
+    # Prevent duplicate reaction (optional)
+    if not ReportReaction.objects.filter(report=report, reaction_type=reaction_type, ip_address=ip).exists():
+        ReportReaction.objects.create(report=report, reaction_type=reaction_type, ip_address=ip)
+
+    return redirect('public_reports')
+
+def get_client_ip(request):
+    x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+    return x_forwarded.split(',')[0] if x_forwarded else request.META.get('REMOTE_ADDR')
 
 
 @login_required

@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block content %}
+
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>📄 Global Daily Reports</title>
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
+</head>
+<body class="p-4">
+    <h2>📄 Global Daily Reports</h2>
+
+    <!-- Date Filter -->
+    <form method="get" class="mb-3 d-flex gap-2">
+        <input type="date" name="from" value="{{ from_date }}" class="form-control" required>
+        <input type="date" name="to" value="{{ to_date }}" class="form-control" required>
+        <button type="submit" class="btn btn-primary">Filter</button>
+    </form>
+
+    {% for report in reports %}
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <strong>{{ report.attendance.employee.name }}</strong> | {{ report.attendance.date }}
+            </div>
+            <div class="card-body">
+                <p><strong>Check-in:</strong> {{ report.attendance.check_in_time }}</p>
+                <p><strong>Check-out:</strong> {{ report.attendance.check_out_time }}</p>
+                <p><strong>Report:</strong><br>{{ report.report_text }}</p>
+
+                <!-- Reactions -->
+                <div class="mb-3">
+                    <a href="{% url 'submit_reaction' report.id 'like' %}" class="btn btn-outline-primary btn-sm">
+                        👍 ({{ report.like_count }})
+                    </a>
+                    <a href="{% url 'submit_reaction' report.id 'love' %}" class="btn btn-outline-danger btn-sm">
+                        ❤️ ({{ report.love_count }})
+                    </a>
+                    <a href="{% url 'submit_reaction' report.id 'fire' %}" class="btn btn-outline-warning btn-sm">
+                        🔥 ({{ report.fire_count }})
+                    </a>
+                </div>
+
+                <!-- Comments -->
+                <h6>💬 Comments:</h6>
+                <ul>
+                    {% for comment in report.comments.all %}
+                        <li><strong>{{ comment.name }}</strong>: {{ comment.comment }}</li>
+                    {% empty %}
+                        <li>No comments yet.</li>
+                    {% endfor %}
+                </ul>
+
+                <!-- Comment Form -->
+                <form action="{% url 'submit_comment' report.id %}" method="post">
+                    {% csrf_token %}
+                    <input type="text" name="name" placeholder="Your name" class="form-control mb-2" required />
+                    <textarea name="comment" placeholder="Write a comment..." class="form-control mb-2" required></textarea>
+                    <button type="submit" class="btn btn-success btn-sm">Submit Comment</button>
+                </form>
+            </div>
+        </div>
+    {% empty %}
+        <p>No reports found for the selected dates.</p>
+    {% endfor %}
+</body>
+</html>
+{% endblock %}
