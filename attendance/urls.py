@@ -41,6 +41,9 @@ urlpatterns = [
     path('accounts/', include('django.contrib.auth.urls')),
     path('login/', auth_views.LoginView.as_view(template_name='attendance/login.html'), name='login'),
     path('user_login/', auth_views.LoginView.as_view(template_name='attendance/login.html'), name='user_login'),
+    path('public-reports/', views.public_reports, name='public_reports'),
+    path('submit-comment/<int:report_id>/', views.submit_comment, name='submit_comment'),
+    path('submit-reaction/<int:report_id>/<str:reaction_type>/', views.submit_reaction, name='submit_reaction'),
     path('admin-login/', auth_views.LoginView.as_view(template_name='admin_login.html'), name='admin_login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
 ]

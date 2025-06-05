@@ -55,10 +55,8 @@ from django.db.models import Prefetch
 from calendar import monthrange
 from dateutil.relativedelta import relativedelta
 from .forms import DailyReportForm
-from .models import DailyReport
-
-
-
+from .models import DailyReport, ReportComment, ReportReaction
+from django.db.models import Count, Q
 
 from .models import  Attendance_Employee_data, Attendance_Attendance_data, QR_Code
 from .forms import UserRegistrationForm, EmployeeRegistrationForm
