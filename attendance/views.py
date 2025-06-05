@@ -195,8 +195,6 @@ def dashboard_view(request):
     if user.is_authenticated:
         try:
             current_employee = Attendance_Employee_data.objects.get(user=user)
-
-            # Get today's attendance for the current user
             today_attendance = Attendance_Attendance_data.objects.filter(
                 employee=current_employee, date=today
             ).first()
@@ -211,14 +209,21 @@ def dashboard_view(request):
                 minutes = int((total_seconds % 3600) // 60)
                 working_hours_display = f"{hours:02d}:{minutes:02d}"
         except Attendance_Employee_data.DoesNotExist:
-            pass  # Log error or redirect if needed
+            pass
 
-    # Define on-time thresholds per shift
+    # Define shift-specific on-time and working hours requirements
     shift_thresholds = {
-        'general': time(10, 30),
-        'morning': time(10, 0),
-        'evening': time(14, 30),
-        'both': time(10, 0)  # Or define more granular logic for both shifts
+        'general': time(9, 45),
+        'morning': time(9, 45),
+        'evening': time(14, 15),
+        'both': time(10, 0),
+    }
+
+    shift_minimum_hours = {
+        'general': 8,
+        'morning': 4,
+        'evening': 4,
+        'both': 8,
     }
 
     all_employees = Attendance_Employee_data.objects.filter(user__isnull=False)
@@ -235,6 +240,7 @@ def dashboard_view(request):
         shift_display = record.get_shift_type_display() if record and record.shift_type else "Not Set"
         shift_key = record.shift_type if record and record.shift_type else None
         on_time_threshold = shift_thresholds.get(shift_key)
+        required_hours = shift_minimum_hours.get(shift_key, 8)
 
         status = {
             "name": f"{user_obj.first_name} {user_obj.last_name}",
@@ -242,7 +248,9 @@ def dashboard_view(request):
             "check_out": None,
             "color": "",
             "check_in_raw": None,
-            "shift": shift_display
+            "shift": shift_display,
+            "timing_status": "",
+            "early_checkout": False,
         }
 
         if leave:
@@ -256,11 +264,18 @@ def dashboard_view(request):
                 check_out_ist = timezone.localtime(record.check_out_time)
                 status["check_out"] = check_out_ist.strftime('%I:%M %p')
 
-            # Apply shift-specific on-time logic
+                total_duration = record.check_out_time - record.check_in_time
+                total_hours = total_duration.total_seconds() / 3600
+
+                if total_hours < required_hours:
+                    status["early_checkout"] = True
+
             if on_time_threshold and check_in_ist.time() > on_time_threshold:
                 status["color"] = "text-danger"
+                status["timing_status"] = "Late"
             else:
                 status["color"] = "text-success"
+                status["timing_status"] = "On Time"
 
             present_employees.append(status)
         else:
@@ -500,18 +515,21 @@ def public_reports(request):
     from_date = request.GET.get('from')
     to_date = request.GET.get('to')
 
+    # Base queryset with related employee and reactions preloaded
     reports = DailyReport.objects.select_related('attendance__employee') \
-        .prefetch_related('reactions') \
-        .order_by('-attendance__date')
-    #reports = DailyReport.objects.select_related('attendance__employee').all().order_by('-attendance__date')
+                                 .prefetch_related('reactions') \
+                                 .order_by('-attendance__date')
 
+    # Apply date filtering if provided
     if from_date and to_date:
         reports = reports.filter(
             attendance__date__range=[from_date, to_date]
         )
 
-    # Add like/dislike count manually to avoid template errors
+    # Add reaction counts for display
     for report in reports:
+        report.employee_name = f"{report.attendance.employee.user.first_name} {report.attendance.employee.user.last_name}"
+        report.date = report.attendance.date
         report.like_count = report.reactions.filter(reaction_type='like').count()
         report.love_count = report.reactions.filter(reaction_type='love').count()
         report.fire_count = report.reactions.filter(reaction_type='fire').count()
@@ -522,7 +540,6 @@ def public_reports(request):
         'to_date': to_date,
     }
     return render(request, 'attendance/public_reports.html', context)
-
 
 @csrf_exempt
 def submit_comment(request, report_id):
