@@ -115,6 +115,21 @@ DATABASES = {
 # }
 
 
+# DATABASES = {    # for local
+#     'default': {
+#         'ENGINE': 'mysql.connector.django',
+#         'HOST': 'bigfixdb.mysql.database.azure.com',
+#         'USER': 'dbadmin',
+#         'PASSWORD': 'Ud4Fn685jQn2A9XGyiYx',
+#         'NAME': 'Bigfix',
+#         'PORT': '3306',
+#         'OPTIONS': {
+#             'ssl_ca': os.path.join(BASE_DIR, 'certs', 'DigiCertGlobalRootG2.crt.pem'),
+#         }
+#     }
+# }
+
+
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 

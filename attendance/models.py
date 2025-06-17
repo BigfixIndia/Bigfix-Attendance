@@ -25,6 +25,7 @@ class ReportReaction(models.Model):
     reacted_at = models.DateTimeField(auto_now_add=True)
 
 class Attendance_Employee_data(models.Model):
+    profile_pic = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     employee_id = models.CharField(max_length=20, unique=True)
     department = models.CharField(max_length=100)

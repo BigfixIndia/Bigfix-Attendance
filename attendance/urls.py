@@ -7,8 +7,10 @@ from django.conf.urls.static import static
  
 
 urlpatterns = [
-    path('', views.index, name='index'),
+    path('index/', views.index, name='index'),
     path('register/', views.register, name='register'),
+    path('change-profile-picture/', views.change_profile_picture, name='change_profile_picture'),
+    path('download-id-card/', views.download_id_card, name='download_id_card'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('select-shift/', views.select_shift, name='select_shift'),
     path('scan-qr/', views.scan_qr_code, name='scan_qr_code'),
@@ -33,16 +35,31 @@ urlpatterns = [
     path('get_recent_attendance_data/', views.get_recent_attendance_data, name='get_recent_attendance_data'),
     path('monthly_attendance/<int:year>/<int:month>/', views.monthly_attendance_view, name='monthly_attendance'),
 
+    path('admin_login/', views.custom_admin_login, name='custom_admin_login'),   # admin login
+    path('admin_dashboard/', views.custom_admin_dashboard, name='custom_admin_dashboard'),
+
+
+    path('admin_dashboard/', views.admin_dashboard_view, name='admin_dashboard'),
+    path('employee_data/', views.employee_data_view, name='employee_data'),
+    path('edit_employees/<str:pk>/', views.edit_employee, name='edit_employees'),
+    path('delete_employees/<int:pk>/', views.delete_employee, name='delete_employees'),
+    path('attendance_data/', views.employee_attendance, name='attendance_data'),
+    path('attendance/edit/<int:pk>/', views.edit_attendance, name='edit_attendance'),
+    path('attendance/add/', views.add_attendance, name='add_attendance'),
+    path('display_leaverequest/', views.display_leaverequest, name='display_leaverequest'),
+    path('employee-leave-requests/<int:user_id>/', views.individual_leave_requests, name='employee_leave_requests'), 
+    path('edit_leave_request/<int:pk>/', views.edit_leave_request, name='edit_leave_request'),
+    
 
     #path("admin/download-salary-slip/<int:salary_id>/", views.download_salary_slip, name="download_salary_slip"),
     #path('logout/', views.logout, name='logout'),
 
     # Authentication URLs
     path('accounts/', include('django.contrib.auth.urls')),
-    path('login/', auth_views.LoginView.as_view(template_name='attendance/login.html'), name='login'),
+    path('', auth_views.LoginView.as_view(template_name='attendance/login.html'), name='login'),
     path('user_login/', auth_views.LoginView.as_view(template_name='attendance/login.html'), name='user_login'),
     path('admin-login/', auth_views.LoginView.as_view(template_name='admin_login.html'), name='admin_login'),
-    path('public-reports/', views.public_reports, name='public_reports'),
+    path('publicreports/', views.public_reports, name='public_reports'),
     path('submit-comment/<int:report_id>/', views.submit_comment, name='submit_comment'),
     path('submit-reaction/<int:report_id>/<str:reaction_type>/', views.submit_reaction, name='submit_reaction'),
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),

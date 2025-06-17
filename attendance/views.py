@@ -3,7 +3,8 @@ from io import BytesIO
 import json
 import os
 from urllib import request
-from venv import logger
+from venv import logger 
+import logging
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, authenticate
@@ -57,8 +58,9 @@ from calendar import monthrange
 from dateutil.relativedelta import relativedelta
 from .forms import DailyReportForm
 from .models import DailyReport, ReportComment, ReportReaction
-
-
+from django.utils import timezone
+from datetime import datetime
+from django.core.paginator import Paginator
 
 
 from .models import  Attendance_Employee_data, Attendance_Attendance_data, QR_Code
@@ -179,6 +181,124 @@ from django.shortcuts import render
 from operator import itemgetter
 from .models import Attendance_Employee_data, Attendance_Attendance_data, Attendance_LeaveRequest
 
+# def dashboard_view(request):
+#     today = date.today()
+#     status_list = []
+#     present_employees = []
+#     leave_list = []
+#     absent_list = []
+#     today_attendance = None
+#     has_checked_in = False
+#     has_checked_out = False
+#     working_hours_display = None
+#     current_employee = None
+
+#     user = request.user
+#     if user.is_authenticated:
+#         try:
+#             current_employee = Attendance_Employee_data.objects.get(user=user)
+#             today_attendance = Attendance_Attendance_data.objects.filter(
+#                 employee=current_employee, date=today
+#             ).first()
+
+#             has_checked_in = today_attendance is not None and today_attendance.check_in_time is not None
+#             has_checked_out = today_attendance is not None and today_attendance.check_out_time is not None
+
+#             if has_checked_in and has_checked_out:
+#                 time_diff = today_attendance.check_out_time - today_attendance.check_in_time
+#                 total_seconds = time_diff.total_seconds()
+#                 hours = int(total_seconds // 3600)
+#                 minutes = int((total_seconds % 3600) // 60)
+#                 working_hours_display = f"{hours:02d}:{minutes:02d}"
+#         except Attendance_Employee_data.DoesNotExist:
+#             pass
+
+#     # Define shift-specific on-time and working hours requirements
+#     shift_thresholds = {
+#         'general': time(9, 45),
+#         'morning': time(9, 45),
+#         'evening': time(14, 15),
+#         'both': time(10, 0),
+#     }
+
+#     shift_minimum_hours = {
+#         'general': 8,
+#         'morning': 4,
+#         'evening': 4,
+#         'both': 8,
+#     }
+
+#     all_employees = Attendance_Employee_data.objects.filter(user__isnull=False)
+
+#     for employee in all_employees:
+#         user_obj = employee.user
+#         record = Attendance_Attendance_data.objects.filter(employee=employee, date=today).first()
+#         leave = Attendance_LeaveRequest.objects.filter(
+#             employee=employee,
+#             from_date__lte=today,
+#             to_date__gte=today
+#         ).first()
+
+#         shift_display = record.get_shift_type_display() if record and record.shift_type else "Not Set"
+#         shift_key = record.shift_type if record and record.shift_type else None
+#         on_time_threshold = shift_thresholds.get(shift_key)
+#         required_hours = shift_minimum_hours.get(shift_key, 8)
+
+#         status = {
+#             "name": f"{user_obj.first_name} {user_obj.last_name}",
+#             "check_in": None,
+#             "check_out": None,
+#             "color": "",
+#             "check_in_raw": None,
+#             "shift": shift_display,
+#             "timing_status": "",
+#             "early_checkout": False,
+#         }
+
+#         if leave:
+#             leave_list.append({"employee__name": status["name"]})
+#         elif record and record.check_in_time:
+#             check_in_ist = timezone.localtime(record.check_in_time)
+#             status["check_in"] = check_in_ist.strftime('%I:%M %p')
+#             status["check_in_raw"] = check_in_ist
+
+#             if record.check_out_time:
+#                 check_out_ist = timezone.localtime(record.check_out_time)
+#                 status["check_out"] = check_out_ist.strftime('%I:%M %p')
+
+#                 total_duration = record.check_out_time - record.check_in_time
+#                 total_hours = total_duration.total_seconds() / 3600
+
+#                 if total_hours < required_hours:
+#                     status["early_checkout"] = True
+
+#             if on_time_threshold and check_in_ist.time() > on_time_threshold:
+#                 status["color"] = "text-danger"
+#                 status["timing_status"] = "Late"
+#             else:
+#                 status["color"] = "text-success"
+#                 status["timing_status"] = "On Time"
+
+#             present_employees.append(status)
+#         else:
+#             absent_list.append({"name": status["name"]})
+
+#     present_employees.sort(key=itemgetter('check_in_raw'))
+#     status_list = present_employees
+
+#     return render(request, 'attendance/dashboard_view.html', {
+#         "today": today,
+#         "status_list": status_list,
+#         "present_count": len(present_employees),
+#         "leave_list": leave_list,
+#         "absent_list": absent_list,
+#         "today_attendance": today_attendance,
+#         "has_checked_in": has_checked_in,
+#         "has_checked_out": has_checked_out,
+#         "working_hours_display": working_hours_display
+#     })
+
+
 def dashboard_view(request):
     today = date.today()
     status_list = []
@@ -211,7 +331,7 @@ def dashboard_view(request):
         except Attendance_Employee_data.DoesNotExist:
             pass
 
-    # Define shift-specific on-time and working hours requirements
+    # Shift-specific thresholds
     shift_thresholds = {
         'general': time(9, 45),
         'morning': time(9, 45),
@@ -226,7 +346,7 @@ def dashboard_view(request):
         'both': 8,
     }
 
-    all_employees = Attendance_Employee_data.objects.filter(user__isnull=False)
+    all_employees = Attendance_Employee_data.objects.filter(user__isnull=False, is_active=True)
 
     for employee in all_employees:
         user_obj = employee.user
@@ -234,7 +354,8 @@ def dashboard_view(request):
         leave = Attendance_LeaveRequest.objects.filter(
             employee=employee,
             from_date__lte=today,
-            to_date__gte=today
+            to_date__gte=today,
+            status='APPROVED'  # ✅ Only approved leaves
         ).first()
 
         shift_display = record.get_shift_type_display() if record and record.shift_type else "Not Set"
@@ -254,7 +375,7 @@ def dashboard_view(request):
         }
 
         if leave:
-            leave_list.append({"employee__name": status["name"]})
+            leave_list.append({"employee__name": status["name"]})  # ✅ Add only approved leave here
         elif record and record.check_in_time:
             check_in_ist = timezone.localtime(record.check_in_time)
             status["check_in"] = check_in_ist.strftime('%I:%M %p')
@@ -295,7 +416,6 @@ def dashboard_view(request):
         "has_checked_out": has_checked_out,
         "working_hours_display": working_hours_display
     })
-
 
 
 @staff_member_required
@@ -346,32 +466,122 @@ def index(request):
         return redirect('dashboard')
     return render(request, 'attendance/login.html')
 
+
+from django.contrib.auth import login, authenticate
+from django.contrib import messages
+from django.shortcuts import render, redirect
+from .forms import UserRegistrationForm, EmployeeRegistrationForm
+
 def register(request):
     if request.method == 'POST':
         user_form = UserRegistrationForm(request.POST)
-        employee_form = EmployeeRegistrationForm(request.POST, request.FILES)
+        employee_form = EmployeeRegistrationForm(request.POST, request.FILES)  # <-- this handles profile_pic
         
         if user_form.is_valid() and employee_form.is_valid():
             user = user_form.save()
+
+            # Save employee data and profile_pic
             employee = employee_form.save(commit=False)
             employee.user = user
+            if 'profile_pic' in request.FILES:
+                employee.profile_pic = request.FILES['profile_pic']  # <-- add this line
             employee.save()
             
+            # Log in user
             username = user_form.cleaned_data.get('username')
             password = user_form.cleaned_data.get('password1')
             user = authenticate(username=username, password=password)
-            user_login(request)
-            
+            login(request, user)
+
             messages.success(request, f"Account created for {username}. You are now logged in.")
             return redirect('dashboard')
+        else:
+            messages.error(request, "Registration failed. Please correct the errors below.")
     else:
         user_form = UserRegistrationForm()
         employee_form = EmployeeRegistrationForm()
-    
+
     return render(request, 'attendance/register.html', {
         'user_form': user_form,
         'employee_form': employee_form
     })
+
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import HttpResponse
+from .forms import EmployeeRegistrationForm, ProfilePictureForm
+from .models import Attendance_Employee_data
+import magic
+import base64
+import os
+import subprocess
+import tempfile
+
+
+
+# def dashboard(request):
+#     return render(request, 'attendance/dashboard.html',)
+
+def dashboard(request):
+    try:
+        employee = Attendance_Employee_data.objects.get(user=request.user)
+    except Attendance_Employee_data.DoesNotExist:
+        employee = None
+    form = ProfilePictureForm(instance=employee)
+    return render(request, 'attendance/dashboard.html', {'employee': employee, 'form': form})
+
+@login_required
+def change_profile_picture(request):
+    try:
+        employee = Attendance_Employee_data.objects.get(user=request.user)
+    except Attendance_Employee_data.DoesNotExist:
+        messages.error(request, "Employee profile not found.")
+        return redirect('dashboard')
+
+    if request.method == 'POST':
+        form = ProfilePictureForm(request.POST, request.FILES, instance=employee)
+        
+        if 'profile_pic' not in request.FILES:
+            messages.error(request, "No file selected. Please choose an image.")
+            return redirect('dashboard')
+
+        file = request.FILES['profile_pic']
+        mime = magic.Magic(mime=True)
+        file_type = mime.from_buffer(file.read(1024))
+        file.seek(0)
+        allowed_types = ['image/jpeg', 'image/png', 'image/gif']
+        if file_type not in allowed_types:
+            messages.error(request, f"Invalid file format. Only JPEG, PNG, or GIF allowed. Got: {file_type}")
+            return redirect('dashboard')
+
+        max_size = 5 * 1024 * 1024  # 5MB
+        if file.size > max_size:
+            messages.error(request, f"File too large. Maximum size is 5MB. Got: {file.size / 1024 / 1024:.2f}MB")
+            return redirect('dashboard')
+
+        if form.is_valid():
+            employee.profile_pic = file
+            employee.save()
+            messages.success(request, "Profile picture updated successfully.")
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"Error in {field}: {error}")
+        return redirect('dashboard')
+    else:
+        return redirect('dashboard')
+
+
+@login_required
+def download_id_card(request):
+    try:
+        employee = Attendance_Employee_data.objects.get(user=request.user)
+    except Attendance_Employee_data.DoesNotExist:
+        messages.error(request, "Employee profile not found.")
+        return redirect('dashboard')
+
+    return render(request, 'print_idcard.html', {'employee': employee})
 
 def calculate_working_hours(working_hours):
     if working_hours is None:
@@ -511,28 +721,64 @@ def dashboard(request):
 
     return render(request, 'attendance/dashboard.html', context)
 
+# def public_reports(request):
+#     from_date = request.GET.get('from')
+#     to_date = request.GET.get('to')
+
+#     # Base queryset with related employee and reactions preloaded
+#     reports = DailyReport.objects.select_related('attendance__employee') \
+#                                  .prefetch_related('reactions') \
+#                                  .order_by('-attendance__date')
+
+#     # Apply date filtering if provided
+#     if from_date and to_date:
+#         reports = reports.filter(
+#             attendance__date__range=[from_date, to_date]
+#         )
+
+#     # Add reaction counts for display
+#     for report in reports:
+#         report.employee_name = f"{report.attendance.employee.user.first_name} {report.attendance.employee.user.last_name}"
+#         report.date = report.attendance.date
+#         report.like_count = report.reactions.filter(reaction_type='like').count()
+#         report.love_count = report.reactions.filter(reaction_type='love').count()
+#         report.fire_count = report.reactions.filter(reaction_type='fire').count()
+
+#     context = {
+#         'reports': reports,
+#         'from_date': from_date,
+#         'to_date': to_date,
+#     }
+#     return render(request, 'attendance/public_reports.html', context)
+
+
+from django.db.models import Count, Q, F, Value, CharField
+from django.db.models.functions import Concat
+
 def public_reports(request):
     from_date = request.GET.get('from')
     to_date = request.GET.get('to')
 
-    # Base queryset with related employee and reactions preloaded
-    reports = DailyReport.objects.select_related('attendance__employee') \
-                                 .prefetch_related('reactions') \
-                                 .order_by('-attendance__date')
+    # Base queryset with related objects and annotations
+    reports = DailyReport.objects.select_related('attendance__employee__user') \
+        .prefetch_related('reactions') \
+        .annotate(
+            employee_name=Concat(
+                F('attendance__employee__user__first_name'),
+                Value(' '),
+                F('attendance__employee__user__last_name'),
+                output_field=CharField()
+            ),
+            date=F('attendance__date'),
+            like_count=Count('reactions', filter=Q(reactions__reaction_type='like')),
+            love_count=Count('reactions', filter=Q(reactions__reaction_type='love')),
+            fire_count=Count('reactions', filter=Q(reactions__reaction_type='fire'))
+        ) \
+        .order_by('-attendance__date')
 
     # Apply date filtering if provided
     if from_date and to_date:
-        reports = reports.filter(
-            attendance__date__range=[from_date, to_date]
-        )
-
-    # Add reaction counts for display
-    for report in reports:
-        report.employee_name = f"{report.attendance.employee.user.first_name} {report.attendance.employee.user.last_name}"
-        report.date = report.attendance.date
-        report.like_count = report.reactions.filter(reaction_type='like').count()
-        report.love_count = report.reactions.filter(reaction_type='love').count()
-        report.fire_count = report.reactions.filter(reaction_type='fire').count()
+        reports = reports.filter(attendance__date__range=[from_date, to_date])
 
     context = {
         'reports': reports,
@@ -540,6 +786,7 @@ def public_reports(request):
         'to_date': to_date,
     }
     return render(request, 'attendance/public_reports.html', context)
+
 
 @csrf_exempt
 def submit_comment(request, report_id):
@@ -948,34 +1195,6 @@ def get_salary_details(request):
 
     return render(request, "attendance/salarydetails.html", context)
 
-#@login_required
-#def calendar_page(request):
-    # Fetch all events (Holidays and Workdays) here and pass them to the template
- #   employee = Attendance_Employee_data.objects.get(user=request.user)
-  #  events = []
-
-    # Holidays
-   # for holiday in Holiday.objects.all():
-    #       'title': holiday.title,
-     #       'start': str(holiday.date),
-      #      'color': '#dc3545'  # Red for Holidays
-      #  })
-
-    # Workdays (if needed)
-    #workdays = Attendance_Attendance_data.objects.filter(employee=employee, status='Present')
-    #for day in workdays:
-     #   events.append({
-      #      'title': 'Work Day',
-       #     'start': str(day.date),
-        #    'color': '#198754'  # Green for Workdays
-   #     })
-
-    # Pass events to the calendar page template
-    #context = {
-     #   'events': events
-    #}
-
-    #return render(request, 'attendance/calendar.html', context) %
 
 @login_required
 def monthly_attendance_view(request, year=None, month=None):
@@ -1046,3 +1265,449 @@ def logout(request):
     response.delete_cookie('adminid')
     return response
 
+
+def custom_admin_login(request):
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        user = authenticate(request, username=username, password=password)
+
+        # Only allow staff or superusers
+        if user is not None and (user.is_staff or user.is_superuser):
+            login(request, user)
+            return redirect('custom_admin_dashboard')
+        else:
+            messages.error(request, 'Invalid credentials or not authorized.')
+
+    return render(request, 'layouts/admin_login.html')
+
+
+def admin_dashboard_view(request):
+    return render(request, 'layouts/admin_dashboard.html')
+
+
+@login_required
+def employee_data_view(request):
+    query = request.GET.get('q', '').strip()
+    status = request.GET.get('status', 'all')  # Default to 'all'
+    employees = Attendance_Employee_data.objects.select_related('user').all()
+    if query:
+        employees = employees.filter(
+            Q(user__first_name__icontains=query) |
+            Q(user__last_name__icontains=query)
+        )
+
+    if status == 'active':
+        employees = employees.filter(is_active=True)
+    elif status == 'inactive':
+        employees = employees.filter(is_active=False)
+
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        employee_data = [{
+            'name': employee.user.get_full_name(),
+            'employee_id': employee.employee_id,  # Match frontend expectation
+            'department': employee.department or 'Not set',
+            'position': employee.position or 'Not set',
+            'phone': employee.phone_number or 'Not set',
+            'employment_type': employee.get_employment_type_display() or 'Not set',
+            'is_active': employee.is_active,  # Match frontend 'is_active' for status badge
+            'edit_url': reverse('edit_employees', args=[employee.id])  # Add edit_url for frontend
+        } for employee in employees]
+        return JsonResponse({'employees': employee_data})
+
+    # Render the template for non-AJAX requests
+    context = {
+        'employees': employees,
+        'query': query,
+    }
+    return render(request, 'layouts/employee_data.html', context)
+
+
+@login_required
+def edit_employee(request, pk):
+    employee = get_object_or_404(Attendance_Employee_data, pk=pk)
+
+    if request.method == 'POST':  # ✅ Fixed typo here
+        # ✅ Use request.POST not request
+        employee.user.first_name = request.POST.get('first_name')
+        employee.user.last_name = request.POST.get('last_name')
+        employee.user.save()
+
+        employee.department = request.POST.get('department')
+        employee.position = request.POST.get('position')
+        employee.phone_number = request.POST.get('phone_number')
+        employee.employment_type = request.POST.get('employment_type')
+        employee.is_active = True if request.POST.get('is_active') == 'on' else False
+
+        employee.save()
+        return redirect('employee_data')
+
+    return render(request, 'layouts/edit_employee_data.html', {'employee': employee})
+
+@login_required
+def delete_employee(request, pk):
+    employee = get_object_or_404(Attendance_Employee_data, pk=pk)
+    if request.method == 'POST':
+        employee.delete()
+        return redirect('employee_data')  # Redirect to the employee list or summary page
+    return render(request, 'layouts/delete_employee.html', {'employee': employee})
+
+import logging
+
+
+@login_required
+def edit_attendance(request, pk):
+    attendance = get_object_or_404(Attendance_Attendance_data, pk=pk)
+
+    if request.method == 'POST':
+        # Parse and update date
+        date_str = request.POST.get('date')
+        if date_str:
+            attendance.date = datetime.strptime(date_str, '%Y-%m-%d').date()
+
+        # Parse check_in_time (datetime-local input to aware datetime)
+        check_in = request.POST.get('check_in_time')
+        if check_in:
+            dt = datetime.fromisoformat(check_in)
+            attendance.check_in_time = timezone.make_aware(dt) if timezone.is_naive(dt) else dt
+        else:
+            attendance.check_in_time = None
+
+        # Parse check_out_time
+        check_out = request.POST.get('check_out_time')
+        if check_out:
+            dt = datetime.fromisoformat(check_out)
+            attendance.check_out_time = timezone.make_aware(dt) if timezone.is_naive(dt) else dt
+        else:
+            attendance.check_out_time = None
+
+        # Shift type and status
+        attendance.shift_type = request.POST.get('shift_type', attendance.shift_type)
+        attendance.status = request.POST.get('status', attendance.status)
+
+        # Notes
+        attendance.notes = request.POST.get('notes', '').strip()
+
+        # Working hours (decimal)
+        working_hours = request.POST.get('working_hours')
+        if working_hours:
+            try:
+                attendance.working_hours = float(working_hours)
+            except ValueError:
+                attendance.working_hours = None
+        else:
+            attendance.working_hours = None
+
+        # Overtime hours (decimal)
+        overtime_hours = request.POST.get('overtime_hours')
+        if overtime_hours:
+            try:
+                attendance.overtime_hours = float(overtime_hours)
+            except ValueError:
+                attendance.overtime_hours = 0
+        else:
+            attendance.overtime_hours = 0
+
+        # Save updated attendance record
+        attendance.save()
+
+        return redirect('attendance_data')  # Adjust redirect URL name as per your URLs
+
+    # GET request: provide choices for dropdowns
+    shift_choices = Attendance_Attendance_data._meta.get_field('shift_type').choices
+    status_choices = Attendance_Attendance_data._meta.get_field('status').choices
+
+    return render(request, 'layouts/update_attendance.html', {
+        'attendance': attendance,
+        'shift_choices': shift_choices,
+        'status_choices': status_choices,
+    })
+
+
+
+
+@login_required
+def add_attendance(request):
+    employees = Attendance_Employee_data.objects.all()
+    shift_choices = Attendance_Attendance_data._meta.get_field('shift_type').choices
+    status_choices = Attendance_Attendance_data._meta.get_field('status').choices
+
+    if request.method == 'POST':
+        employee_id = request.POST.get('employee')
+        date_str = request.POST.get('date')
+        check_in_str = request.POST.get('check_in_time')
+        check_out_str = request.POST.get('check_out_time')
+        shift_type = request.POST.get('shift_type')
+        status = request.POST.get('status')
+        working_hours = request.POST.get('working_hours')
+        overtime_hours = request.POST.get('overtime_hours')
+
+        try:
+            employee = Attendance_Employee_data.objects.get(pk=employee_id)
+            date = datetime.strptime(date_str, '%Y-%m-%d').date()
+
+            # ✅ Prevent duplicate attendance
+            if Attendance_Attendance_data.objects.filter(employee=employee, date=date).exists():
+                messages.error(request, f"Attendance already exists for {employee.user.get_full_name()} on {date}")
+                return redirect('add_attendance')
+
+            attendance = Attendance_Attendance_data(employee=employee, date=date)
+
+            if check_in_str:
+                dt = datetime.fromisoformat(check_in_str)
+                attendance.check_in_time = timezone.make_aware(dt) if timezone.is_naive(dt) else dt
+
+            if check_out_str:
+                dt = datetime.fromisoformat(check_out_str)
+                attendance.check_out_time = timezone.make_aware(dt) if timezone.is_naive(dt) else dt
+
+            attendance.shift_type = shift_type
+            attendance.status = status
+
+            try:
+                attendance.working_hours = float(working_hours) if working_hours else None
+            except ValueError:
+                attendance.working_hours = None
+
+            try:
+                attendance.overtime_hours = float(overtime_hours) if overtime_hours else 0
+            except ValueError:
+                attendance.overtime_hours = 0
+
+            attendance.save()
+            messages.success(request, "Attendance added successfully.")
+            return redirect('attendance_data')
+
+        except Attendance_Employee_data.DoesNotExist:
+            messages.error(request, "Employee not found.")
+        except Exception as e:
+            messages.error(request, f"Something went wrong: {str(e)}")
+
+    return render(request, 'layouts/add_attendance.html', {
+        'employees': employees,
+        'shift_choices': shift_choices,
+        'status_choices': status_choices,
+    })
+
+
+
+@login_required
+def display_leaverequest(request):
+    leavereq = Attendance_LeaveRequest.objects.all().order_by('-created_at')
+    
+    # Search by employee name
+    search_query = request.GET.get('q', '')
+    if search_query:
+        leavereq = leavereq.filter(
+            Q(employee__user__first_name__icontains=search_query) |
+            Q(employee__user__last_name__icontains=search_query)
+        )
+    
+    # Filter by leave type and status
+    leave_type = request.GET.get('leave_type', '')
+    status = request.GET.get('status', '')
+    
+    if leave_type:
+        leavereq = leavereq.filter(leave_type=leave_type)
+    if status:
+        leavereq = leavereq.filter(status=status)
+    
+    # Define choices for template
+    LEAVE_TYPE_CHOICES = [
+        ('SICK', 'Sick Leave'),
+        ('CASUAL', 'Casual Leave'),
+        ('EMERGENCY', 'Emergency Leave'),
+        ('OTHER', 'Other'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('APPROVED', 'Approved'),
+        ('DENIED', 'Denied'),
+    ]
+    
+    context = {
+        'leavereq': leavereq,
+        'leave_type_choices': LEAVE_TYPE_CHOICES,
+        'status_choices': STATUS_CHOICES,
+    }
+    
+    return render(request, 'layouts/list_leaverequest.html', context)
+
+@login_required
+def individual_leave_requests(request, user_id):
+    leavereq = Attendance_LeaveRequest.objects.filter(employee__user__id=user_id)
+    employee_name = leavereq.first().employee.user.get_full_name() if leavereq.exists() else "Unknown"
+    
+    # Filter by leave type and status
+    leave_type = request.GET.get('leave_type', '')
+    status = request.GET.get('status', '')
+    
+    if leave_type:
+        leavereq = leavereq.filter(leave_type=leave_type)
+    if status:
+        leavereq = leavereq.filter(status=status)
+    
+    # Define choices for template
+    LEAVE_TYPE_CHOICES = [
+        ('SICK', 'Sick Leave'),
+        ('CASUAL', 'Casual Leave'),
+        ('EMERGENCY', 'Emergency Leave'),
+        ('OTHER', 'Other'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('APPROVED', 'Approved'),
+        ('DENIED', 'Denied'),
+    ]
+    
+    context = {
+        'leavereq': leavereq,
+        'employee_name': employee_name,
+        'leave_type_choices': LEAVE_TYPE_CHOICES,
+        'status_choices': STATUS_CHOICES,
+        'user_id': user_id,  # Pass user_id to template
+    }
+    
+    return render(request, 'layouts/individual_leave_list.html', context)
+
+
+def edit_leave_request(request,pk):
+    leave=get_object_or_404(Attendance_LeaveRequest,pk=pk)
+    if request.method=='POST':
+        leave.status=request.POST.get('status')
+        leave.admin_reply=request.POST.get('admin_reply')
+        leave.save()  
+        
+        return redirect('display_leaverequest')
+    STATUS_CHOICES=[
+        ('Pending', 'Pending'),
+        ('Approved', 'Approved'),
+        ('Denied', 'Denied'),
+    ]
+    context={
+        'leave':leave,
+        'status_choices':STATUS_CHOICES
+    }
+    return render(request, 'layouts/edit_leaverequest.html', context)
+
+def emp_count(requset):
+    employee_count=Attendance_Employee_data.objects.count() 
+    return render(request,'layouts/admin_dashboard.html',{'employee_count':employee_count})
+
+
+def custom_admin_dashboard(request):
+    if not (request.user.is_staff or request.user.is_superuser):
+        return redirect('admin_login')
+
+    employee_count = Attendance_Employee_data.objects.count()
+    pending_leave_count = Attendance_LeaveRequest.objects.filter(status='Pending').count()
+
+    today = timezone.now().date()
+    six_days_ago = today - timedelta(days=5)
+
+    recent_attendance = Attendance_Attendance_data.objects.select_related(
+        'employee', 'employee__user'
+    ).filter(
+        date__range=(six_days_ago, today)
+    ).order_by('-date')  # remove [:10] if you want *all* from last 6 days
+
+    recent_leavereq = Attendance_LeaveRequest.objects.select_related(
+        'employee', 'employee__user'
+    ).filter(
+        from_date__range=(six_days_ago, today)
+    ).order_by('-from_date')
+
+    return render(request, 'layouts/admin_dashboard.html', {
+        'employee_count': employee_count,
+        'pending_leave_count': pending_leave_count,
+        'recent_attendance': recent_attendance,
+        'recent_leavereq': recent_leavereq,
+    })
+
+
+
+logger = logging.getLogger(__name__)
+@login_required
+def employee_attendance(request):
+    today = timezone.now().date()
+
+    # Get filter parameters
+    filter_type = request.GET.get('filter_type', 'month')
+    custom_date = request.GET.get('custom_date')
+    selected_month = request.GET.get('selected_month')
+    selected_year = request.GET.get('selected_year')
+
+    # Initialize date range
+    start_date = today
+    end_date = today
+
+    # Define months for dropdown
+    months = [
+        (1, 'January'), (2, 'February'), (3, 'March'), (4, 'April'),
+        (5, 'May'), (6, 'June'), (7, 'July'), (8, 'August'),
+        (9, 'September'), (10, 'October'), (11, 'November'), (12, 'December')
+    ]
+
+    # Define years for dropdown
+    current_year = today.year
+    years = list(range(current_year - 5, current_year + 1))
+
+    # Determine filtering range
+    if filter_type == 'today':
+        start_date = today
+        end_date = today
+    elif filter_type == 'past_7_days':
+        start_date = today - timezone.timedelta(days=7)
+        end_date = today
+    elif filter_type == 'month':
+        try:
+            month = int(selected_month) if selected_month else today.month
+            year = int(selected_year) if selected_year else today.year
+            start_date = date(year, month, 1)
+            end_date = date(year, month, monthrange(year, month)[1])
+        except (ValueError, TypeError):
+            start_date = date(today.year, today.month, 1)
+            end_date = date(today.year, today.month, monthrange(today.year, today.month)[1])
+    elif filter_type == 'year':
+        start_date = date(today.year, 1, 1)
+        end_date = date(today.year, 12, 31)
+    elif filter_type == 'custom' and custom_date:
+        try:
+            custom_date = date.fromisoformat(custom_date)
+            start_date = custom_date
+            end_date = custom_date
+        except ValueError:
+            start_date = date(today.year, today.month, 1)
+            end_date = date(today.year, today.month, monthrange(today.year, today.month)[1])
+    else:
+        start_date = date(today.year, today.month, 1)
+        end_date = date(today.year, today.month, monthrange(today.year, today.month)[1])
+
+    logger.debug(f"Filter type: {filter_type}, Start date: {start_date}, End date: {end_date}")
+
+    # Fetch attendance records ordered by date and check-in time
+    attendance_qs = Attendance_Attendance_data.objects.select_related('employee', 'employee__user').filter(
+        date__range=(start_date, end_date)
+    ).order_by('date', 'check_in_time')  # fixed field name
+
+    logger.debug(f"Attendance records found: {attendance_qs.count()}")
+
+    paginator = Paginator(attendance_qs, 25)
+    page_number = request.GET.get('page')
+    employees = paginator.get_page(page_number)
+
+    return render(request, 'layouts/attendance_data.html', {
+        'employees': employees,
+        'month_label': start_date.strftime('%B %Y'),
+        'filter_type': filter_type,
+        'custom_date': custom_date,
+        'selected_month': selected_month,
+        'selected_year': selected_year,
+        'months': months,
+        'years': years,
+        'start_date': start_date,
+        'end_date': end_date,
+    })

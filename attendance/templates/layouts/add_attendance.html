@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h3 class="mb-4">Add Attendance</h3>
+    <form method="POST">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label><strong>Employee Name</strong></label>
+            <select name="employee" class="form-control" required>
+                {% for emp in employees %}
+                    <option value="{{ emp.id }}">{{ emp.user.get_full_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label><strong>Date</strong></label>
+            <input type="date" name="date" class="form-control" required>
+        </div>
+
+        <div class="mb-3">
+            <label><strong>Check-in Time</strong></label>
+            <input type="datetime-local" name="check_in_time" class="form-control">
+        </div>
+
+        <div class="mb-3">
+            <label><strong>Check-out Time</strong></label>
+            <input type="datetime-local" name="check_out_time" class="form-control">
+        </div>
+
+        <div class="mb-3">
+            <label><strong>Status</strong></label>
+            <select name="status" class="form-control" required>
+                {% for val, label in status_choices %}
+                    <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label><strong>Working Hours</strong></label>
+            <input type="number" name="working_hours" step="0.01" class="form-control">
+        </div>
+
+        <div class="mb-3">
+            <label><strong>Overtime Hours</strong></label>
+            <input type="number" name="overtime_hours" step="0.01" class="form-control">
+        </div>
+
+        <div class="mb-3">
+            <label><strong>Shift Type</strong></label>
+            <select name="shift_type" class="form-control" required>
+                {% for val, label in shift_choices %}
+                    <option value="{{ val }}">{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <button type="submit" class="btn btn-success">Add Attendance</button>
+    </form>
+</div>
+{% endblock %}

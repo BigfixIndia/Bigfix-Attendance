@@ -1,0 +1,217 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leave Requests</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .navbar {
+            background-color: #4682B4;
+        }
+        .sidebar {
+            width: 250px;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            background-color: #2c3e50;
+            padding-top: 60px;
+            color: white;
+        }
+        .sidebar a {
+            color: white;
+            padding: 15px;
+            display: block;
+            text-decoration: none;
+        }
+        .sidebar a:hover {
+            background-color: #34495e;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        .table-container {
+            overflow-x: auto;
+        }
+        .table {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            min-width: 800px;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        .table th, .table td {
+            text-align: center;
+            vertical-align: middle;
+            padding: 12px;
+        }
+        .table th {
+            background-color: #4682B4;
+            color: white;
+            font-weight: 600;
+        }
+        .table tbody tr:hover {
+            background-color: #f1f3f5;
+        }
+        .table td {
+            border-bottom: 1px solid #dee2e6;
+        }
+        .print-btn {
+            margin-top: 20px;
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+        .print-btn:hover {
+            background-color: #218838;
+            border-color: #1e7e34;
+        }
+        .filter-container {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .employee-link {
+            color: #007bff;
+            text-decoration: none;
+        }
+        .employee-link:hover {
+            text-decoration: underline;
+        }
+        @media print {
+            .navbar, .sidebar, .print-btn, .filter-container {
+                display: none;
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 0;
+            }
+            .table {
+                box-shadow: none;
+                min-width: auto;
+                border-collapse: collapse;
+            }
+            .table-container {
+                overflow-x: visible;
+            }
+            .table th, .table td {
+                border: 1px solid #dee2e6;
+                padding: 8px;
+            }
+            .employee-link {
+                color: inherit;
+                text-decoration: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Employee Portal</a>
+            <div class="ms-auto d-flex align-items-center">
+                <form class="d-flex me-3 search-form" id="search-form" method="GET" action="{% url 'display_leaverequest' %}">
+                    <input class="form-control me-2" type="search" id="search-input" name="q" placeholder="Search by Employee Name" aria-label="Search" value="{{ request.GET.q }}">
+                    <button class="btn btn-outline-light" type="submit"><i class="fas fa-search"></i></button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <div class="sidebar">
+        <a href="{% url 'custom_admin_dashboard' %}"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</a>
+        <a href="{% url 'employee_data' %}"><i class="fas fa-users me-2"></i>Employees</a>
+        <a href="{% url 'attendance_data' %}"><i class="fas fa-clock me-2"></i>Attendance Details</a>
+        <a href="{% url 'display_leaverequest' %}"><i class="fas fa-calendar-alt me-2"></i>Leave Requests</a>
+        <a href="#payroll"><i class="fas fa-money-bill me-2"></i>Payroll</a>
+        <a href="#holidays"><i class="fas fa-calendar-day me-2"></i>Holidays</a>
+        <a href="#qr-codes"><i class="fas fa-qrcode me-2"></i>QR Codes</a>
+        <a href="#reports"><i class="fas fa-file-alt me-2"></i>Daily Reports</a>
+    </div>
+
+    <div class="main-content">
+        <h4 class="mb-4">
+            <i class="fas fa-calendar-alt me-2"></i>Leave Requests
+        </h4>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Leave Request Records</h5>
+            </div>
+            <div class="card-body">
+                <div class="filter-container">
+                    <form method="GET" action="{% url 'display_leaverequest' %}" class="d-flex gap-3">
+                        <select name="leave_type" class="form-select" onchange="this.form.submit()">
+                            <option value="">All Leave Types</option>
+                            <option value="SICK" {% if request.GET.leave_type == "SICK" %}selected{% endif %}>Sick Leave</option>
+                            <option value="CASUAL" {% if request.GET.leave_type == "CASUAL" %}selected{% endif %}>Casual Leave</option>
+                            <option value="EMERGENCY" {% if request.GET.leave_type == "EMERGENCY" %}selected{% endif %}>Emergency Leave</option>
+                            <option value="OTHER" {% if request.GET.leave_type == "OTHER" %}selected{% endif %}>Other</option>
+                        </select>
+                        <select name="status" class="form-select" onchange="this.form.submit()">
+                            <option value="">All Statuses</option>
+                            <option value="PENDING" {% if request.GET.status == "PENDING" %}selected{% endif %}>Pending</option>
+                            <option value="APPROVED" {% if request.GET.status == "APPROVED" %}selected{% endif %}>Approved</option>
+                            <option value="DENIED" {% if request.GET.status == "DENIED" %}selected{% endif %}>Denied</option>
+                        </select>
+                        <input type="hidden" name="q" value="{{ request.GET.q }}">
+                    </form>
+                </div>
+                <div class="table-container">
+                    <table class="table table-striped table-bordered table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Employee Name</th>
+                                <th>From Date</th>
+                                <th>To Date</th>
+                                <th>Leave Type</th>
+                                <th>Status</th>
+                                <th>Admin Reply</th>
+                                <th>Edit</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for leave in leavereq %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>
+                                        <a href="{% url 'employee_leave_requests' leave.employee.user.id %}" class="employee-link">
+                                            {{ leave.employee.user.get_full_name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ leave.from_date|date:"M d, Y" }}</td>
+                                    <td>{{ leave.to_date|date:"M d, Y" }}</td>
+                                    <td>{{ leave.get_leave_type_display|default:leave.leave_type }}</td>
+                                    <td>{{ leave.get_status_display|default:leave.status }}</td>
+                                    <td>{{ leave.admin_reply|default:"-" }}</td>
+                                    <td>
+                                        <a href="{% url 'edit_leave_request' leave.pk %}" class="btn btn-sm btn-primary"><i class="fas fa-edit"></i>Edit</a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="7" class="text-center">No leave requests found.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary print-btn mt-3" onclick="window.print()">Print Leave Requests</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

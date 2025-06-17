@@ -1,0 +1,203 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Leave Request</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar {
+            transition: transform 0.3s ease-in-out;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0 !important;
+            }
+        }
+        @media print {
+            .navbar, .sidebar {
+                display: none;
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 0;
+            }
+        }
+        /* Custom CSS for Main Content */
+        .main-content {
+            background: linear-gradient(to bottom, #f3f4f6, #e5e7eb); /* Subtle gradient background */
+        }
+        .card {
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+        }
+        .info-section {
+            background: linear-gradient(to right, #eef2ff, #e0e7ff); /* Gradient for info section */
+            border-left: 4px solid #4f46e5; /* Indigo accent */
+            transition: background 0.3s ease;
+        }
+        .info-section p {
+            position: relative;
+            padding-left: 1.5rem;
+        }
+        .info-section p::before {
+            content: '\f058'; /* Font Awesome check-circle icon */
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            left: 0;
+            color: #4f46e5;
+            font-size: 1rem;
+        }
+        .form-field {
+            position: relative;
+        }
+        .form-field::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: #4f46e5;
+            transition: width 0.3s ease;
+        }
+        .form-field:focus-within::after {
+            width: 100%;
+        }
+        .submit-btn {
+            position: relative;
+            overflow: hidden;
+        }
+        .submit-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s ease, height 0.6s ease;
+        }
+        .submit-btn:hover::before {
+            width: 200px;
+            height: 200px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Navbar -->
+    <nav class="bg-indigo-600 text-white shadow-md">
+        <div class="container mx-auto px-4 py-3 flex items-center justify-between">
+            <a class="text-xl font-bold" href="#">Employee Portal</a>
+            <div class="flex items-center space-x-4">
+                <form class="flex">
+                    <input class="rounded-l-md border-0 py-2 px-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" type="search" placeholder="Search by Employee Name" aria-label="Search">
+                    <button class="bg-indigo-700 hover:bg-indigo-800 text-white px-4 rounded-r-md" type="submit">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </form>
+                <button class="md:hidden text-white focus:outline-none" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sidebar -->
+    <div class="sidebar fixed top-0 bottom-0 w-64 bg-gray-800 text-white pt-16 overflow-y-auto">
+        <a href="#" class="flex items-center px-4 py-3 hover:bg-gray-700">
+            <i class="fas fa-tachometer-alt mr-2"></i>Dashboard
+        </a>
+        <a href="{% url 'employee_data' %}" class="flex items-center px-4 py-3 hover:bg-gray-700">
+            <i class="fas fa-users mr-2"></i>Employees
+        </a>
+        <a href="{% url 'employee_data' %}" class="flex items-center px-4 py-3 hover:bg-gray-700">
+            <i class="fas fa-search mr-2"></i>Employee Data
+        </a>
+        <a href="{% url 'display_leaverequest' %}" class="flex items-center px-4 py-3 hover:bg-gray-700">
+            <i class="fas fa-calendar-alt mr-2"></i>Leave Requests
+        </a>
+        <a href="#announcements" class="flex items-center px-4 py-3 hover:bg-gray-700">
+            <i class="fas fa-bullhorn mr-2"></i>Announcements
+        </a>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content ml-64 p-8 transition-all flex items-center justify-center min-h-screen">
+        <div class="card bg-white rounded-2xl p-10 w-full max-w-md">
+            <h2 class="text-3xl font-extrabold text-gray-900 mb-8 text-center">
+                Approved Leave Request
+            </h2>
+
+            <div class="info-section mb-8 space-y-4 p-6 rounded-lg">
+                <p class="text-sm text-gray-700">
+                    <span class="font-semibold text-gray-900">Employee:</span> {{ leave.employee.user.get_full_name }}
+                </p>
+                <p class="text-sm text-gray-700">
+                    <span class="font-semibold text-gray-900">From:</span> {{ leave.from_date|date:"M d, Y" }}
+                </p>
+                <p class="text-sm text-gray-700">
+                    <span class="font-semibold text-gray-900">To:</span> {{ leave.to_date|date:"M d, Y" }}
+                </p>
+                <p class="text-sm text-gray-700">
+                    <span class="font-semibold text-gray-900">Leave Type:</span> {{ leave.get_leave_type_display|default:leave.leave_type }}
+                </p>
+            </div>
+
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                <div class="form-field">
+                    <label for="status" class="block text-sm font-medium text-gray-800 mb-2">Status</label>
+                    <select name="status" id="status" required
+                            class="block w-full rounded-lg border border-gray-300 bg-white py-2.5 px-4 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-200">
+                        {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if leave.status == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-field">
+                    <label for="admin_reply" class="block text-sm font-medium text-gray-800 mb-2">Admin Reply</label>
+                    <textarea name="admin_reply" id="admin_reply" rows="5"
+                              class="block w-full rounded-lg border border-gray-300 bg-white py-2.5 px-4 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-y transition duration-200"
+                              placeholder="Enter your comments or response here...">{{ leave.admin_reply }}</textarea>
+                </div>
+
+                <div class="flex justify-between items-center mt-8">
+                    <a href="{% url 'display_leaverequest' %}"
+                       class="inline-flex justify-center items-center px-5 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200">
+                        Cancel
+                    </a>
+                    <button type="submit"
+                            class="submit-btn inline-flex justify-center items-center px-5 py-2.5 border border-transparent rounded-lg text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-200">
+                        Update
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.classList.toggle('open');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,638 @@
+
+ <!-- {% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Attendance Data</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .navbar {
+            background-color: #4682B4;
+        }
+        .sidebar {
+            width: 250px;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            background-color: #2c3e50;
+            padding-top: 60px;
+            color: white;
+        }
+        .sidebar a {
+            color: white;
+            padding: 15px;
+            display: block;
+            text-decoration: none;
+        }
+        .sidebar a:hover {
+            background-color: #34495e;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        .table-container {
+            overflow-x: auto;
+        }
+        .table {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            min-width: 1000px;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        .table th, .table td {
+            text-align: center;
+            vertical-align: middle;
+            padding: 12px;
+        }
+        .table th {
+            background-color: #4682B4;
+            color: white;
+            font-weight: 600;
+        }
+        .table tbody tr:hover {
+            background-color: #f1f3f5;
+        }
+        .table td {
+            border-bottom: 1px solid #dee2e6;
+        }
+        .table .btn-sm {
+            padding: 5px 10px;
+            font-size: 0.875rem;
+        }
+        .print-btn {
+            margin-top: 20px;
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+        .print-btn:hover {
+            background-color: #218838;
+            border-color: #1e7e34;
+        }
+        .filter-form .form-select, .filter-form .form-control {
+            border-radius: 5px;
+        }
+        .filter-form .btn-primary {
+            background-color: #4682B4;
+            border-color: #4682B4;
+        }
+        .filter-form .btn-primary:hover {
+            background-color: #3b6a9a;
+            border-color: #3b6a9a;
+        }
+        #custom-date-input, #month-year-selection {
+            display: none;
+        }
+        @media print {
+            .navbar, .sidebar, .print-btn, .search-form, .filter-form {
+                display: none;
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 0;
+            }
+            .table {
+                box-shadow: none;
+                min-width: auto;
+                border-collapse: collapse;
+            }
+            .table-container {
+                overflow-x: visible;
+            }
+            .table th, .table td {
+                border: 1px solid #dee2e6;
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Employee Portal</a>
+            <div class="ms-auto d-flex align-items-center">
+                <form class="d-flex me-3 search-form" id="search-form">
+                    <input class="form-control me-2" type="search" id="search-input" name="q" placeholder="Search by Employee Name" aria-label="Search">
+                    <button class="btn btn-outline-light" type="submit"><i class="fas fa-search"></i></button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <div class="sidebar">
+        <a href="#"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</a>
+        <a href="{% url 'employee_data' %}"><i class="fas fa-users me-2"></i>Employees</a>
+        <a href="{% url 'employee_data' %}"><i class="fas fa-search me-2"></i>Employee Data</a>
+        <a href="#leave-requests"><i class="fas fa-calendar-alt me-2"></i>Leave Requests</a>
+        <a href="#announcements"><i class="fas fa-bullhorn me-2"></i>Announcements</a>
+    </div>
+
+    <div class="main-content">
+        <h4 class="mb-4">
+            <i class="fas fa-users me-2"></i>Employee Attendance Data 
+            {% if filter_type == 'custom' %}
+                - {{ start_date|date:"F j, Y" }}
+            {% elif filter_type == 'today' %}
+                - Today
+            {% elif filter_type == 'past_7_days' %}
+                - Past 7 Days
+            {% elif filter_type == 'year' %}
+                - {{ start_date|date:"Y" }}
+            {% elif filter_type == 'month' %}
+                - {{ start_date|date:"F Y" }}
+            {% else %}
+                - {{ month_label }}
+            {% endif %}
+        </h4>
+
+        <div class="filter-form">
+            <form method="GET" id="filter-form">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <select class="form-select" name="filter_type" id="filter-type" onchange="toggleInputs()">
+                            <option value="today" {% if filter_type == 'today' %}selected{% endif %}>Today</option>
+                            <option value="past_7_days" {% if filter_type == 'past_7_days' %}selected{% endif %}>Past 7 Days</option>
+                            <option value="month" {% if filter_type == 'month' %}selected{% endif %}>Select Month</option>
+                            <option value="year" {% if filter_type == 'year' %}selected{% endif %}>This Year</option>
+                            <option value="custom" {% if filter_type == 'custom' %}selected{% endif %}>Custom Date</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="date" class="form-control" name="custom_date" id="custom-date-input" value="{{ custom_date }}">
+                    </div>
+                    <div class="col-md-3" id="month-year-selection">
+                        <select class="form-select" name="selected_month" id="month-select">
+                            <option value="">Select Month</option>
+                            {% for month_num, month_name in months %}
+                                <option value="{{ month_num }}" {% if selected_month|add:0 == month_num %}selected{% endif %}>{{ month_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <select class="form-select mt-2" name="selected_year" id="year-select">
+                            <option value="">Select Year</option>
+                            {% for year in years %}
+                                <option value="{{ year }}" {% if selected_year|add:0 == year %}selected{% endif %}>{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">Apply Filter</button>
+                        <a href="{% url 'add_attendance' %}" class="btn btn-primary">+ Add Attendance</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Attendance Records</h5>
+            </div>
+
+            <div class="card-body">
+                <div class="table-container">
+                    <table class="table table-striped table-bordered table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Date</th>
+                                <th>Employee Name</th>
+                                <th>Check-in Time</th>
+                                <th>Check-out Time</th>
+                                <th>Status</th>
+                                <th>Working Hours</th>
+                                <th>Overtime Hours</th>
+                                <th>Shift Type</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="employee-table-body">
+                            {% for employee in employees %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ employee.date|date:"M d, Y" }}</td>
+                                    <td>{{ employee.employee.user.get_full_name }}</td>
+                                    <td>{{ employee.check_in_time|date:"H:i" }}</td>
+                                    <td>{{ employee.check_out_time|date:"H:i" }}</td>
+                                    <td>{{ employee.get_status_display }}</td>
+                                    <td>{{ employee.working_hours|floatformat:2 }}</td>
+                                    <td>{{ employee.overtime_hours|floatformat:2 }}</td>
+                                    <td>{{ employee.get_shift_type_display }}</td>
+                                    <td>
+                                        <a href="{% url 'edit_attendance' employee.id %}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="10" class="text-center">No attendance records found.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center pt-3">
+                    <div>
+                        <strong>Page {{ employees.number }} of {{ employees.paginator.num_pages }}</strong>
+                    </div>
+                    <nav>
+                        <ul class="pagination mb-0">
+                            {% if employees.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1&filter_type={{ filter_type }}{% if custom_date %}&custom_date={{ custom_date }}{% endif %}{% if selected_month %}&selected_month={{ selected_month }}{% endif %}{% if selected_year %}&selected_year={{ selected_year }}{% endif %}">« First</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ employees.previous_page_number }}&filter_type={{ filter_type }}{% if custom_date %}&custom_date={{ custom_date }}{% endif %}{% if selected_month %}&selected_month={{ selected_month }}{% endif %}{% if selected_year %}&selected_year={{ selected_year }}{% endif %}">Previous</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">« First</span></li>
+                                <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                            {% endif %}
+
+                            <li class="page-item active">
+                                <span class="page-link">{{ employees.number }}</span>
+                            </li>
+
+                            {% if employees.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ employees.next_page_number }}&filter_type={{ filter_type }}{% if custom_date %}&custom_date={{ custom_date }}{% endif %}{% if selected_month %}&selected_month={{ selected_month }}{% endif %}{% if selected_year %}&selected_year={{ selected_year }}{% endif %}">Next</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ employees.paginator.num_pages }}&filter_type={{ filter_type }}{% if custom_date %}&custom_date={{ custom_date }}{% endif %}{% if selected_month %}&selected_month={{ selected_month }}{% endif %}{% if selected_year %}&selected_year={{ selected_year }}{% endif %}">Last »</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">Next</span></li>
+                                <li class="page-item disabled"><span class="page-link">Last »</span></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary print-btn mt-3" onclick="window.print()">Print Employee Details</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleInputs() {
+            const filterType = document.getElementById('filter-type').value;
+            const customDateInput = document.getElementById('custom-date-input');
+            const monthYearSelection = document.getElementById('month-year-selection');
+            
+            customDateInput.style.display = filterType === 'custom' ? 'block' : 'none';
+            monthYearSelection.style.display = filterType === 'month' ? 'block' : 'none';
+        }
+
+        document.addEventListener('DOMContentLoaded', toggleInputs);
+    </script>
+</body>
+</html> -->
+
+
+
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Attendance Data</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .navbar {
+            background-color: #4682B4;
+        }
+        .sidebar {
+            width: 250px;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            background-color: #2c3e50;
+            padding-top: 60px;
+            color: white;
+        }
+        .sidebar a {
+            color: white;
+            padding: 15px;
+            display: block;
+            text-decoration: none;
+        }
+        .sidebar a:hover {
+            background-color: #34495e;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        .table-container {
+            overflow-x: auto;
+        }
+        .table {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            min-width: 1000px;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        .table th, .table td {
+            text-align: center;
+            vertical-align: middle;
+            padding: 12px;
+        }
+        .table th {
+            background-color: #4682B4;
+            color: white;
+            font-weight: 600;
+        }
+        .table tbody tr:hover {
+            background-color: #f1f3f5;
+        }
+        .table td {
+            border-bottom: 1px solid #dee2e6;
+        }
+        .table .btn-sm {
+            padding: 5px 10px;
+            font-size: 0.875rem;
+        }
+        .table a.employee-link {
+            color: #4682B4;
+            text-decoration: none;
+        }
+        .table a.employee-link:hover {
+            text-decoration: underline;
+        }
+        .print-btn {
+            margin-top: 20px;
+            background-color: #28a745;
+            border-color: #28a745;
+        }
+        .print-btn:hover {
+            background-color: #218838;
+            border-color: #1e7e34;
+        }
+        .filter-form .form-select, .filter-form .form-control {
+            border-radius: 5px;
+        }
+        .filter-form .btn-primary {
+            background-color: #4682B4;
+            border-color: #4682B4;
+        }
+        .filter-form .btn-primary:hover {
+            background-color: #3b6a9a;
+            border-color: #3b6a9a;
+        }
+        #custom-date-input, #month-year-selection {
+            display: none;
+        }
+        @media print {
+            .navbar, .sidebar, .print-btn, .search-form, .filter-form {
+                display: none;
+            }
+            .main-content {
+                margin-left: 0;
+                padding: 0;
+            }
+            .table {
+                box-shadow: none;
+                min-width: auto;
+                border-collapse: collapse;
+            }
+            .table-container {
+                overflow-x: visible;
+            }
+            .table th, .table td {
+                border: 1px solid #dee2e6;
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Employee Portal</a>
+            <div class="ms-auto d-flex align-items-center">
+                <form class="d-flex me-3 search-form" id="search-form">
+                    <input class="form-control me-2" type="search" id="search-input" name="q" placeholder="Search by Employee Name" aria-label="Search">
+                    <button class="btn btn-outline-light" type="submit"><i class="fas fa-search"></i></button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <div class="sidebar">
+        <a href="{% url 'custom_admin_dashboard' %}"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</a>
+        <a href="{% url 'employee_data' %}"><i class="fas fa-users me-2"></i>Employees</a>
+        <a href="{% url 'attendance_data' %}"><i class="fas fa-clock me-2"></i>Attendance Details</a>
+        <a href="{% url 'display_leaverequest' %}"><i class="fas fa-calendar-alt me-2"></i>Leave Requests</a>
+        <a href="#payroll"><i class="fas fa-money-bill me-2"></i>Payroll</a>
+        <a href="#holidays"><i class="fas fa-calendar-day me-2"></i>Holidays</a>
+        <a href="#qr-codes"><i class="fas fa-qrcode me-2"></i>QR Codes</a>
+        <a href="#reports"><i class="fas fa-file-alt me-2"></i>Daily Reports</a>
+    </div>
+
+    <div class="main-content">
+        <h4 class="mb-4">
+            <i class="fas fa-users me-2"></i>Employee Attendance Data 
+            {% if selected_employee %}
+                - {{ selected_employee.user.get_full_name }} 
+                {% if filter_type == 'custom' %}
+                    ({{ start_date|date:"F j, Y" }})
+                {% elif filter_type == 'today' %}
+                    (Today)
+                {% elif filter_type == 'past_7_days' %}
+                    (Past 7 Days)
+                {% elif filter_type == 'year' %}
+                    ({{ start_date|date:"Y" }})
+                {% elif filter_type == 'month' %}
+                    ({{ start_date|date:"F Y" }})
+                {% else %}
+                    ({{ month_label }})
+                {% endif %}
+            {% else %}
+                {% if filter_type == 'custom' %}
+                    - {{ start_date|date:"F j, Y" }}
+                {% elif filter_type == 'today' %}
+                    - Today
+                {% elif filter_type == 'past_7_days' %}
+                    - Past 7 Days
+                {% elif filter_type == 'year' %}
+                    - {{ start_date|date:"Y" }}
+                {% elif filter_type == 'month' %}
+                    - {{ start_date|date:"F Y" }}
+                {% else %}
+                    - {{ month_label }}
+                {% endif %}
+            {% endif %}
+        </h4>
+
+        <div class="filter-form">
+            <form method="GET" id="filter-form">
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <select class="form-select" name="filter_type" id="filter-type" onchange="toggleInputs()">
+                            <option value="today" {% if filter_type == 'today' %}selected{% endif %}>Today</option>
+                            <option value="past_7_days" {% if filter_type == 'past_7_days' %}selected{% endif %}>Past 7 Days</option>
+                            <option value="month" {% if filter_type == 'month' %}selected{% endif %}>Select Month</option>
+                            <option value="year" {% if filter_type == 'year' %}selected{% endif %}>This Year</option>
+                            <option value="custom" {% if filter_type == 'custom' %}selected{% endif %}>Custom Date</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="date" class="form-control" name="custom_date" id="custom-date-input" value="{{ custom_date }}">
+                    </div>
+                    <div class="col-md-3" id="month-year-selection">
+                        <select class="form-select" name="selected_month" id="month-select">
+                            <option value="">Select Month</option>
+                            {% for month_num, month_name in months %}
+                                <option value="{{ month_num }}" {% if selected_month|add:0 == month_num %}selected{% endif %}>{{ month_name }}</option>
+                            {% endfor %}
+                        </select>
+                        <select class="form-select mt-2" name="selected_year" id="year-select">
+                            <option value="">Select Year</option>
+                            {% for year in years %}
+                                <option value="{{ year }}" {% if selected_year|add:0 == year %}selected{% endif %}>{{ year }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary me-2">Apply Filter</button>
+                        <a href="{% url 'add_attendance' %}" class="btn btn-primary">+ Add Attendance</a>
+                    </div>
+                    {% if selected_employee %}
+                        <input type="hidden" name="employee_id" value="{{ selected_employee.id }}">
+                    {% endif %}
+                </form>
+            </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Attendance Records</h5>
+            </div>
+
+            <div class="card-body">
+                <div class="table-container">
+                    <table class="table table-striped table-bordered table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Date</th>
+                                <th>Employee Name</th>
+                                <th>Check-in Time</th>
+                                <th>Check-out Time</th>
+                                <th>Status</th>
+                                <th>Working Hours</th>
+                                <th>Overtime Hours</th>
+                                <th>Shift Type</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="employee-table-body">
+                            {% for employee in employees %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ employee.date|date:"M d, Y" }}</td>
+                                    <td>
+                                        <a href="?employee_id={{ employee.employee.id }}&filter_type={{ filter_type }}{% if custom_date %}&custom_date={{ custom_date }}{% endif %}{% if selected_month %}&selected_month={{ selected_month }}{% endif %}{% if selected_year %}&selected_year={{ selected_year }}{% endif %}" class="employee-link">
+                                            {{ employee.employee.user.get_full_name }}
+                                        </a>
+                                    </td>
+                                    <td>{{ employee.check_in_time|time:"h:i A" }}</td>
+                                    <td>{{ employee.check_out_time|time:"h:i A" }}</td>
+                                    <td>{{ employee.get_status_display }}</td>
+                                    <td>{{ employee.working_hours|floatformat:2 }}</td>
+                                    <td>{{ employee.overtime_hours|floatformat:2 }}</td>
+                                    <td>{{ employee.get_shift_type_display }}</td>
+                                    <td>
+                                        <a href="{% url 'edit_attendance' employee.id %}" class="btn btn-sm btn-primary">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="10" class="text-center">No attendance records found.</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center pt-3">
+                    <div>
+                        <strong>Page {{ employees.number }} of {{ employees.paginator.num_pages }}</strong>
+                    </div>
+                    <nav>
+                        <ul class="pagination mb-0">
+                            {% if employees.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1&filter_type={{ filter_type }}{% if custom_date %}&custom_date={{ custom_date }}{% endif %}{% if selected_month %}&selected_month={{ selected_month }}{% endif %}{% if selected_year %}&selected_year={{ selected_year }}{% endif %}{% if selected_employee %}&employee_id={{ selected_employee.id }}{% endif %}">« First</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ employees.previous_page_number }}&filter_type={{ filter_type }}{% if custom_date %}&custom_date={{ custom_date }}{% endif %}{% if selected_month %}&selected_month={{ selected_month }}{% endif %}{% if selected_year %}&selected_year={{ selected_year }}{% endif %}{% if selected_employee %}&employee_id={{ selected_employee.id }}{% endif %}">Previous</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">« First</span></li>
+                                <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                            {% endif %}
+
+                            <li class="page-item active">
+                                <span class="page-link">{{ employees.number }}</span>
+                            </li>
+
+                            {% if employees.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ employees.next_page_number }}&filter_type={{ filter_type }}{% if custom_date %}&custom_date={{ custom_date }}{% endif %}{% if selected_month %}&selected_month={{ selected_month }}{% endif %}{% if selected_year %}&selected_year={{ selected_year }}{% endif %}{% if selected_employee %}&employee_id={{ selected_employee.id }}{% endif %}">Next</a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ employees.paginator.num_pages }}&filter_type={{ filter_type }}{% if custom_date %}&custom_date={{ custom_date }}{% endif %}{% if selected_month %}&selected_month={{ selected_month }}{% endif %}{% if selected_year %}&selected_year={{ selected_year }}{% endif %}{% if selected_employee %}&employee_id={{ selected_employee.id }}{% endif %}">Last »</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">Next</span></li>
+                                <li class="page-item disabled"><span class="page-link">Last »</span></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary print-btn mt-3" onclick="window.print()">Print Employee Details</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleInputs() {
+            const filterType = document.getElementById('filter-type').value;
+            const customDateInput = document.getElementById('custom-date-input');
+            const monthYearSelection = document.getElementById('month-year-selection');
+            
+            customDateInput.style.display = filterType === 'custom' ? 'block' : 'none';
+            monthYearSelection.style.display = filterType === 'month' ? 'block' : 'none';
+        }
+
+        document.addEventListener('DOMContentLoaded', toggleInputs);
+    </script>
+</body>
+</html>
