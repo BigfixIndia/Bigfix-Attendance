@@ -1,0 +1,94 @@
+<!-- <!DOCTYPE html>
+<html>
+<head>
+    <title>My Admin Login</title>
+</head>
+<body>
+    <h2>Custom Admin Login</h2>
+    {% if messages %}
+        {% for message in messages %}
+            <p style="color: red;">{{ message }}</p>
+        {% endfor %}
+    {% endif %}
+    <form method="post">
+        {% csrf_token %}
+        <label>Username:</label>
+        <input type="text" name="username" required><br>
+        <label>Password:</label>
+        <input type="password" name="password" required><br>
+        <button type="submit">Login</button>
+    </form>
+</body>
+</html> -->
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Admin Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(to right, #4b6cb7, #182848);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Arial', sans-serif;
+        }
+        .login-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            padding: 2rem;
+            width: 100%;
+            max-width: 400px;
+        }
+        .input-field {
+            transition: all 0.3s ease;
+        }
+        .input-field:focus {
+            border-color: #4b6cb7;
+            box-shadow: 0 0 0 3px rgba(75, 108, 183, 0.2);
+        }
+        .btn-login {
+            transition: all 0.3s ease;
+        }
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card animate__animated animate__fadeInUp">
+        <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Admin Login</h2>
+        {% if messages %}
+            {% for message in messages %}
+                <p class="text-red-500 text-center mb-4 animate__animated animate__shakeX">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label class="block text-gray-700 font-medium mb-1">Username</label>
+                <input type="text" name="username" required 
+                       class="input-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2">
+            </div>
+            <div>
+                <label class="block text-gray-700 font-medium mb-1">Password</label>
+                <input type="password" name="password" required 
+                       class="input-field w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2">
+            </div>
+            <button type="submit" 
+                    class="btn-login w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">
+                Login
+            </button>
+        </form>
+    </div>
+</body>
+</html>
