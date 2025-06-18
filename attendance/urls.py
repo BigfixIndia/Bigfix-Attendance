@@ -49,7 +49,7 @@ urlpatterns = [
     path('display_leaverequest/', views.display_leaverequest, name='display_leaverequest'),
     path('employee-leave-requests/<int:user_id>/', views.individual_leave_requests, name='employee_leave_requests'), 
     path('edit_leave_request/<int:pk>/', views.edit_leave_request, name='edit_leave_request'),
-    
+    path('employee_attendance/<int:user_id>/', views.employee_attendance_detail, name='employee_attendance_detail'),
 
     #path("admin/download-salary-slip/<int:salary_id>/", views.download_salary_slip, name="download_salary_slip"),
     #path('logout/', views.logout, name='logout'),
@@ -66,6 +66,7 @@ urlpatterns = [
     path('submit-reaction/<int:report_id>/<str:reaction_type>/', views.submit_reaction, name='submit_reaction'),
     path('admin-login/', auth_views.LoginView.as_view(template_name='admin_login.html'), name='admin_login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
+
 ]
 
 # ✅ Serve media files during development

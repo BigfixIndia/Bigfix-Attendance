@@ -1291,7 +1291,7 @@ def admin_dashboard_view(request):
 def employee_data_view(request):
     query = request.GET.get('q', '').strip()
     status = request.GET.get('status', 'all')  # Default to 'all'
-    employees = Attendance_Employee_data.objects.select_related('user').all()
+    employees = Attendance_Employee_data.objects.select_related('user').all().order_by('user__first_name')
     if query:
         employees = employees.filter(
             Q(user__first_name__icontains=query) |
@@ -1711,3 +1711,123 @@ def employee_attendance(request):
         'start_date': start_date,
         'end_date': end_date,
     })
+
+
+# def employee_attendance_detail(request, user_id):
+#     employee = get_object_or_404(Attendance_Employee_data, user__id=user_id)
+    
+#     # Fetch all attendance records for this employee
+#     attendance_data = Attendance_Attendance_data.objects.filter(employee=employee).order_by('-date')
+
+#     context = {
+#         'employee': employee,
+#         'attendance_data': attendance_data
+#     }
+    
+#     return render(request, 'layouts/hh.html', context)
+
+
+from django.shortcuts import render
+from django.core.paginator import Paginator
+from django.http import Http404
+from .models import Attendance_Employee_data, Attendance_Attendance_data
+from datetime import datetime, timedelta
+from django.utils import timezone
+
+def employee_attendance_detail(request, user_id):
+    try:
+        employee = Attendance_Employee_data.objects.get(user__id=user_id)
+    except Attendance_Employee_data.DoesNotExist:
+        return render(request, 'layouts/hh.html', {
+            'error_message': f"No employee found for user ID {user_id}. Please check the ID or contact the administrator.",
+            'employee': None,
+            'attendance_data': [],
+            'attendance_records': None,
+            'filter_type': 'today',
+            'custom_date': '',
+            'selected_month': '',
+            'selected_year': '',
+            'start_date': timezone.now().date(),
+            'month_label': 'Today',
+            'months': [(i, datetime(2000, i, 1).strftime('%B')) for i in range(1, 13)],
+            'years': range(2020, timezone.now().year + 1),
+        })
+
+    # Get filter parameters from GET request
+    filter_type = request.GET.get('filter_type', 'today')
+    custom_date = request.GET.get('custom_date', '')
+    selected_month = request.GET.get('selected_month', '')
+    selected_year = request.GET.get('selected_year', '')
+
+    # Initialize queryset with base filter
+    attendance_data = Attendance_Attendance_data.objects.filter(employee=employee)
+
+    # Apply filters based on filter_type
+    today = timezone.now().date()
+    
+    if filter_type == 'today':
+        attendance_data = attendance_data.filter(date=today)
+        start_date = today
+        month_label = "Today"
+        attendance_data = attendance_data.order_by('-date')  # Newest first
+    elif filter_type == 'past_7_days':
+        start_date = today - timedelta(days=6)
+        attendance_data = attendance_data.filter(date__range=[start_date, today])
+        month_label = "Past 7 Days"
+        attendance_data = attendance_data.order_by('date')  # Newest first
+    elif filter_type == 'month' and selected_month and selected_year:
+        try:
+            start_date = datetime(int(selected_year), int(selected_month), 1).date()
+            end_date = (start_date + timedelta(days=31)).replace(day=1) - timedelta(days=1)
+            attendance_data = attendance_data.filter(date__range=[start_date, end_date])
+            month_label = start_date.strftime("%B %Y")
+            attendance_data = attendance_data.order_by('date')  # Oldest first for month
+        except ValueError:
+            month_label = "Invalid Month/Year"
+            attendance_data = attendance_data.none()
+    elif filter_type == 'year':
+        start_date = today.replace(month=1, day=1)
+        attendance_data = attendance_data.filter(date__year=today.year)
+        month_label = today.strftime("%Y")
+        attendance_data = attendance_data.order_by('-date')  # Newest first
+    elif filter_type == 'custom' and custom_date:
+        try:
+            start_date = datetime.strptime(custom_date, '%Y-%m-%d').date()
+            attendance_data = attendance_data.filter(date=start_date)
+            month_label = start_date.strftime("%B %d, %Y")
+            attendance_data = attendance_data.order_by('-date')  # Newest first
+        except ValueError:
+            month_label = "Invalid Date"
+            attendance_data = attendance_data.none()
+    else:
+        # Default to today
+        attendance_data = attendance_data.filter(date=today)
+        start_date = today
+        month_label = "Today"
+        attendance_data = attendance_data.order_by('-date')  # Newest first
+
+    # Pagination
+    paginator = Paginator(attendance_data, 10)  # 10 records per page
+    page_number = request.GET.get('page')
+    attendance_records = paginator.get_page(page_number)
+
+    # Prepare context
+    months = [(i, datetime(2000, i, 1).strftime('%B')) for i in range(1, 13)]
+    years = range(2020, today.year + 1)
+
+    context = {
+        'employee': employee,
+        'attendance_data': attendance_data,
+        'attendance_records': attendance_records,
+        'filter_type': filter_type,
+        'custom_date': custom_date,
+        'selected_month': selected_month,
+        'selected_year': selected_year,
+        'start_date': start_date,
+        'month_label': month_label,
+        'months': months,
+        'years': years,
+    }
+    
+   
+    return render(request, 'layouts/attendance _individual_employee_data.html', context)
