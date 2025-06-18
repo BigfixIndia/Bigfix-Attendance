@@ -179,6 +179,7 @@ class AnnouncementRead(models.Model):
     read_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        db_table = "announcement_read"
         unique_together = ('announcement', 'user')
 
 class Attendance_LeaveRequest(models.Model):

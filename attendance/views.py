@@ -520,7 +520,13 @@ import tempfile
 
 
 # def dashboard(request):
-#     return render(request, 'attendance/dashboard.html',)
+#     try:
+#         employee = Attendance_Employee_data.objects.get(user=request.user)
+#     except Attendance_Employee_data.DoesNotExist:
+#         employee = None
+#     form = ProfilePictureForm(instance=employee)
+#     return render(request, 'attendance/dashboard.html', {'employee': employee, 'form': form})
+
 
 def dashboard(request):
     try:
@@ -1713,27 +1719,7 @@ def employee_attendance(request):
     })
 
 
-# def employee_attendance_detail(request, user_id):
-#     employee = get_object_or_404(Attendance_Employee_data, user__id=user_id)
-    
-#     # Fetch all attendance records for this employee
-#     attendance_data = Attendance_Attendance_data.objects.filter(employee=employee).order_by('-date')
-
-#     context = {
-#         'employee': employee,
-#         'attendance_data': attendance_data
-#     }
-    
-#     return render(request, 'layouts/hh.html', context)
-
-
-from django.shortcuts import render
-from django.core.paginator import Paginator
-from django.http import Http404
-from .models import Attendance_Employee_data, Attendance_Attendance_data
-from datetime import datetime, timedelta
-from django.utils import timezone
-
+@login_required
 def employee_attendance_detail(request, user_id):
     try:
         employee = Attendance_Employee_data.objects.get(user__id=user_id)
@@ -1828,6 +1814,17 @@ def employee_attendance_detail(request, user_id):
         'months': months,
         'years': years,
     }
-    
-   
     return render(request, 'layouts/attendance _individual_employee_data.html', context)
+
+
+#Announcement
+
+
+def announcement(request):
+    if request.method=='POST':
+        tit=request.POST.get('title')
+        mes=request.POST.get('message')
+        att=request.POST.get('attachment')
+        Announcement.objects.create(title=tit,message=mes,attachment=att)
+        return HttpResponse("done")
+    return render(request,'layouts/admin_announcement.html')

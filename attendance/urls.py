@@ -51,8 +51,10 @@ urlpatterns = [
     path('edit_leave_request/<int:pk>/', views.edit_leave_request, name='edit_leave_request'),
     path('employee_attendance/<int:user_id>/', views.employee_attendance_detail, name='employee_attendance_detail'),
 
-    #path("admin/download-salary-slip/<int:salary_id>/", views.download_salary_slip, name="download_salary_slip"),
-    #path('logout/', views.logout, name='logout'),
+    #accouncement
+
+    path('announcement/', views.announcement, name='announcement'),
+  
 
     # Authentication URLs
     path('accounts/', include('django.contrib.auth.urls')),
