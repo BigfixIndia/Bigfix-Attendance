@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
-{% load static %}
-
 {% block content %}
+
+{% load static %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -9,16 +9,12 @@
     <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}">
 </head>
 <body class="p-4">
-    <h2>📄 Global {{ model_name }}s</h2>
+    <h2>📄 Global Daily Reports</h2>
 
-    <!-- Filter Form -->
+    <!-- Date Filter -->
     <form method="get" class="mb-3 d-flex gap-2">
         <input type="date" name="from" value="{{ from_date }}" class="form-control" required>
         <input type="date" name="to" value="{{ to_date }}" class="form-control" required>
-        <select name="type" class="form-control" required>
-            <option value="hourly" {% if report_type == 'hourly' %}selected{% endif %}>Hourly Reports</option>
-            <option value="section" {% if report_type == 'section' %}selected{% endif %}>Section Reports</option>
-        </select>
         <button type="submit" class="btn btn-primary">Filter</button>
     </form>
 
@@ -30,56 +26,91 @@
         <div class="card-body">
             <p><strong>Check-in:</strong> {{ report.attendance.check_in_time }}</p>
             <p><strong>Check-out:</strong> {{ report.attendance.check_out_time }}</p>
-
-            {% if report_type == 'hourly' %}
-                <p><strong>Hour Slot:</strong> {{ report.hour_slot }}</p>
-                <p><strong>Summary:</strong><br>{{ report.task_summary }}</p>
-            {% elif report_type == 'section' %}
-                <p><strong>Section Title:</strong> {{ report.section_title }}</p>
-                <p><strong>Details:</strong><br>{{ report.report_text }}</p>
-            {% endif %}
-
-            <!-- Reactions -->
+            <p><strong>Report:</strong><br>{{ report.report_text }}</p>
+            
             <div class="mb-3">
-                {% for reaction in all_reactions %}
-                    {% if reaction.object_id == report.id and reaction.reaction_type == 'like' %}
-                        {% ifchanged %}<a href="{% url 'submit_reaction' report_type report.id 'like' %}" class="btn btn-outline-primary btn-sm">👍 ({% widthratio forloop.counter 1 1 %})</a>{% endifchanged %}
-                    {% endif %}
-                    {% if reaction.object_id == report.id and reaction.reaction_type == 'love' %}
-                        {% ifchanged %}<a href="{% url 'submit_reaction' report_type report.id 'love' %}" class="btn btn-outline-danger btn-sm">❤️ ({% widthratio forloop.counter 1 1 %})</a>{% endifchanged %}
-                    {% endif %}
-                    {% if reaction.object_id == report.id and reaction.reaction_type == 'fire' %}
-                        {% ifchanged %}<a href="{% url 'submit_reaction' report_type report.id 'fire' %}" class="btn btn-outline-warning btn-sm">🔥 ({% widthratio forloop.counter 1 1 %})</a>{% endifchanged %}
-                    {% endif %}
-                {% empty %}
-                    <a href="{% url 'submit_reaction' report_type report.id 'like' %}" class="btn btn-outline-primary btn-sm">👍 (0)</a>
-                    <a href="{% url 'submit_reaction' report_type report.id 'love' %}" class="btn btn-outline-danger btn-sm">❤️ (0)</a>
-                    <a href="{% url 'submit_reaction' report_type report.id 'fire' %}" class="btn btn-outline-warning btn-sm">🔥 (0)</a>
-                {% endfor %}
+                <a href="{% url 'submit_reaction' report.id 'like' %}" class="btn btn-outline-primary btn-sm">
+                    👍 ({{ report.like_count }})
+                </a>
+                <a href="{% url 'submit_reaction' report.id 'love' %}" class="btn btn-outline-danger btn-sm">
+                    ❤️ ({{ report.love_count }})
+                </a>
+                <a href="{% url 'submit_reaction' report.id 'fire' %}" class="btn btn-outline-warning btn-sm">
+                    🔥 ({{ report.fire_count }})
+                </a>
             </div>
 
-            <!-- Comments -->
             <h6>💬 Comments:</h6>
-            <ul>
-                {% for comment in all_comments %}
-                    {% if comment.object_id == report.id %}
+                <ul>
+                    {% for comment in report.comments.all %}
                         <li><strong>{{ comment.name }}</strong>: {{ comment.comment }}</li>
-                    {% endif %}
-                {% empty %}
-                    <li>No comments yet.</li>
-                {% endfor %}
-            </ul>
+                    {% empty %}
+                        <li>No comments yet.</li>
+                    {% endfor %}
+                </ul>
 
-            <!-- Comment Form -->
-            <form action="{% url 'submit_comment' report_type report.id %}" method="post">
-                {% csrf_token %}
-                <input type="text" name="name" placeholder="Your name" class="form-control mb-2" required />
-                <textarea name="comment" placeholder="Write a comment..." class="form-control mb-2" required></textarea>
-                <button type="submit" class="btn btn-success btn-sm">Submit Comment</button>
-            </form>
+                <!-- Comment Form -->
+                <form action="{% url 'submit_comment' report.id %}" method="post">
+                    {% csrf_token %}
+                    <input type="text" name="name" placeholder="Your name" class="form-control mb-2" required />
+                    <textarea name="comment" placeholder="Write a comment..." class="form-control mb-2" required></textarea>
+                    <button type="submit" class="btn btn-success btn-sm">Submit Comment</button>
+                </form>
         </div>
     </div>
     {% endfor %}
+
+{% comment %}
+    {% for report in reports %}
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <strong>{{ report.attendance.employee.name }}</strong> | {{ report.attendance.date }}
+            </div>
+            <div class="card-body">
+                <p><strong>Check-in:</strong> {{ report.attendance.check_in_time }}</p>
+                <p><strong>Check-out:</strong> {{ report.attendance.check_out_time }}</p>
+                <p><strong>Report:</strong><br>{{ report.report_text }}</p>
+                <div>
+                👍 {{ report.like_count }} &nbsp;
+                ❤️ {{ report.love_count }} &nbsp;
+                🔥 {{ report.fire_count }}
+            </div>
+                <!-- Reactions -->
+                <div class="mb-3">
+                    <a href="{% url 'submit_reaction' report.id 'like' %}" class="btn btn-outline-primary btn-sm">
+                        👍 ({{ report.like_count }})
+                    </a>
+                    <a href="{% url 'submit_reaction' report.id 'love' %}" class="btn btn-outline-danger btn-sm">
+                        ❤️ ({{ report.love_count }})
+                    </a>
+                    <a href="{% url 'submit_reaction' report.id 'fire' %}" class="btn btn-outline-warning btn-sm">
+                        🔥 ({{ report.fire_count }})
+                    </a>
+                </div>
+
+                <!-- Comments -->
+                <h6>💬 Comments:</h6>
+                <ul>
+                    {% for comment in report.comments.all %}
+                        <li><strong>{{ comment.name }}</strong>: {{ comment.comment }}</li>
+                    {% empty %}
+                        <li>No comments yet.</li>
+                    {% endfor %}
+                </ul>
+
+                <!-- Comment Form -->
+                <form action="{% url 'submit_comment' report.id %}" method="post">
+                    {% csrf_token %}
+                    <input type="text" name="name" placeholder="Your name" class="form-control mb-2" required />
+                    <textarea name="comment" placeholder="Write a comment..." class="form-control mb-2" required></textarea>
+                    <button type="submit" class="btn btn-success btn-sm">Submit Comment</button>
+                </form>
+            </div>
+        </div>
+    {% empty %}
+        <p>No reports found for the selected dates.</p>
+    {% endfor %}
+{% endcomment %}
 </body>
 </html>
 {% endblock %}

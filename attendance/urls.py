@@ -40,16 +40,7 @@ urlpatterns = [
 
     path('admin_login/', views.custom_admin_login, name='custom_admin_login'),   # admin login
     path('admin_dashboard/', views.custom_admin_dashboard, name='custom_admin_dashboard'),
-    
-    #Holiday..
-    
-    path('cal/', views.holiday_calendar_view, name='holiday_calendar'),
-    path('calendar/holidays/', views.holiday_events, name='holiday_events'),
-    path('add_holiday/', views.add_holiday, name='add_holiday'),
-    path('holiday_list/', views.display_holiday, name='holiday_list'),
-    path('holidays/edit/<int:pk>/', views.edit_holiday, name='edit_holiday'),
-    path('holidays/delete/<int:pk>/', views.delete_holiday, name='delete_holiday'),
-    path('calander_view/', views.header_calander, name='calander_view'),
+
 
     path('admin_dashboard/', views.admin_dashboard_view, name='admin_dashboard'),
     path('employee_data/', views.employee_data_view, name='employee_data'),
@@ -80,7 +71,6 @@ urlpatterns = [
     path('submit-reaction/<int:report_id>/<str:reaction_type>/', views.submit_reaction, name='submit_reaction'),
     path('admin-login/', auth_views.LoginView.as_view(template_name='admin_login.html'), name='admin_login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
-    path('auth/', views.auth_login, name='auth_login')
 
 ]
 
