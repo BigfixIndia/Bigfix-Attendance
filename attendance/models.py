@@ -7,14 +7,8 @@ from datetime import date
 from django.db import models
 from django.contrib.auth.models import User
 
-from django.contrib.contenttypes.fields import GenericForeignKey
-from django.contrib.contenttypes.models import ContentType
-
 class ReportComment(models.Model):
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
-    report_object = GenericForeignKey('content_type', 'object_id')
-    
+    report = models.ForeignKey('DailyReport', on_delete=models.CASCADE, related_name='comments')
     name = models.CharField(max_length=100)
     comment = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
@@ -25,15 +19,10 @@ class ReportReaction(models.Model):
         ('love', '❤️'),
         ('fire', '🔥'),
     )
-
-    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-    object_id = models.PositiveIntegerField()
-    report_object = GenericForeignKey('content_type', 'object_id')
-
+    report = models.ForeignKey('DailyReport', on_delete=models.CASCADE, related_name='reactions')
     reaction_type = models.CharField(choices=REACTIONS, max_length=10)
-    ip_address = models.GenericIPAddressField()
+    ip_address = models.GenericIPAddressField()  # Optional: Prevent multiple reacts from same IP
     reacted_at = models.DateTimeField(auto_now_add=True)
-
 
 class Attendance_Employee_data(models.Model):
     profile_pic = models.ImageField(upload_to='profile_pics/', null=True, blank=True)
@@ -135,17 +124,17 @@ class Attendance_Attendance_data(models.Model):
 
      super().save(*args, **kwargs)
 
-# class DailyReport(models.Model):
-#     attendance = models.OneToOneField(Attendance_Attendance_data, on_delete=models.CASCADE)
-#     report_text = models.TextField()
-#     submitted_at = models.DateTimeField(auto_now_add=True)
+class DailyReport(models.Model):
+    attendance = models.OneToOneField(Attendance_Attendance_data, on_delete=models.CASCADE)
+    report_text = models.TextField()
+    submitted_at = models.DateTimeField(auto_now_add=True)
 
-#     class Meta:
-#         db_table = "daily_report"
-#         ordering = ['-attendance__date', '-submitted_at']
+    class Meta:
+        db_table = "daily_report"
+        ordering = ['-attendance__date', '-submitted_at']
 
-#     def __str__(self):
-#         return f"{self.attendance.employee.user.username} - {self.attendance.date}"
+    def __str__(self):
+        return f"{self.attendance.employee.user.username} - {self.attendance.date}"
 
 
 class QR_Code(models.Model):
@@ -278,29 +267,3 @@ class Holiday(models.Model):
 
     def __str__(self):
         return f"{self.title} - {self.date}"
-    
-class SectionReport(models.Model):
-    attendance = models.ForeignKey('Attendance_Attendance_data', on_delete=models.CASCADE, related_name='section_reports')
-    section_title = models.CharField(max_length=255)
-    report_text = models.TextField()
-    submitted_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = "section_report"
-
-    def __str__(self):
-        return f"{self.attendance.employee.user.username} - {self.section_title}"
-
-class HourlyReport(models.Model):
-    attendance = models.ForeignKey('Attendance_Attendance_data', on_delete=models.CASCADE, related_name='hourly_reports')
-    hour_slot = models.CharField(max_length=50)  # e.g., "10:00 - 11:00"
-    task_summary = models.TextField()
-    submitted_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['-submitted_at']
-        db_table = "hourly_report"
-
-    def __str__(self):
-        return f"{self.attendance.employee.user.username} - {self.hour_slot}"
-

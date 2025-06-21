@@ -34,9 +34,6 @@ urlpatterns = [
     path('calendar_events/', views.calendar_events, name='calendar_events'),
     path('get_recent_attendance_data/', views.get_recent_attendance_data, name='get_recent_attendance_data'),
     path('monthly_attendance/<int:year>/<int:month>/', views.monthly_attendance_view, name='monthly_attendance'),
-    path('submit_comment/<str:report_type>/<int:report_id>/', views.submit_comment, name='submit_comment'),
-    path('submit_reaction/<str:report_type>/<int:report_id>/<str:reaction_type>/', views.submit_reaction, name='submit_reaction'),
-
 
     path('admin_login/', views.custom_admin_login, name='custom_admin_login'),   # admin login
     path('admin_dashboard/', views.custom_admin_dashboard, name='custom_admin_dashboard'),
