@@ -40,15 +40,6 @@ urlpatterns = [
 
     path('admin_login/', views.custom_admin_login, name='custom_admin_login'),   # admin login
     path('admin_dashboard/', views.custom_admin_dashboard, name='custom_admin_dashboard'),
-    
-    #Holiday..
-    
-    path('cal/', views.holiday_calendar_view, name='holiday_calendar'),
-    path('calendar/holidays/', views.holiday_events, name='holiday_events'),
-    path('add_holiday/', views.add_holiday, name='add_holiday'),
-    path('holiday_list/', views.display_holiday, name='holiday_list'),
-    path('holidays/edit/<int:pk>/', views.edit_holiday, name='edit_holiday'),
-    path('holidays/delete/<int:pk>/', views.delete_holiday, name='delete_holiday'),
 
 
     path('admin_dashboard/', views.admin_dashboard_view, name='admin_dashboard'),

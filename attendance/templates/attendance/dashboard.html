@@ -280,29 +280,5 @@ function toggleReportDisplay(id) {
         document.getElementById(id).style.display = 'block';
     }
 }
-
-function addHourlyRow() {
-    const container = document.getElementById('hourlyInputs');
-    const group = document.createElement('div');
-    group.className = 'row mb-2 hourly-group';
-    group.innerHTML = `
-        <div class="col-md-4">
-            <input type="text" name="hour_time[]" class="form-control" placeholder="e.g. 12pm - 1pm">
-        </div>
-        <div class="col-md-8">
-            <input type="text" name="hour_report[]" class="form-control" placeholder="Worked on task">
-        </div>`;
-    container.appendChild(group);
-}
-
-function addSectionRow() {
-    const container = document.getElementById('sectionInputs');
-    const group = document.createElement('div');
-    group.className = 'mb-2 section-group';
-    group.innerHTML = `
-        <input type="text" name="section_title[]" class="form-control mb-1" placeholder="Section Title">
-        <textarea name="section_content[]" class="form-control" placeholder="Details"></textarea>`;
-    container.appendChild(group);
-}
 </script>
 {% endblock %}
