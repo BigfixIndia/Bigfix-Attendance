@@ -3,21 +3,28 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from .models import  Attendance_Employee_data, Attendance_Attendance_data
 from .models import Attendance_LeaveRequest
-from .models import DailyReport
+from .models import SectionReport, HourlyReport
 from django.core.exceptions import ValidationError
 
-class DailyReportForm(forms.ModelForm):
+class SectionReportForm(forms.ModelForm):
     class Meta:
-        model = DailyReport
-        fields = ['report_text']
+        model = SectionReport
+        fields = ['section_title', 'report_text']
         widgets = {
-            'report_text': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 5,
-                'placeholder': 'Write your daily report (max 400 words)...',
-                'style': 'height: 100px; overflow: auto; resize: vertical;'
-            }),
+            'section_title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Section Title'}),
+            'report_text': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Write section-wise report...'}),
         }
+
+class HourlyReportForm(forms.ModelForm):
+    class Meta:
+        model = HourlyReport
+        fields = ['hour_slot', 'task_summary']
+        widgets = {
+            'hour_slot': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. 2:00 - 3:00'}),
+            'task_summary': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Write hourly task summary...'}),
+        }
+
+
 
 # def clean_report_text(self):
 #         text = self.cleaned_data.get('report_text', '')

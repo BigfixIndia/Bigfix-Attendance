@@ -42,7 +42,7 @@ from django.utils import timezone
 from .models import Announcement
 from .models import AnnouncementRead
 from .forms import LeaveRequestForm 
-from .forms import DailyReportForm
+# from .forms import DailyReportForm
 from .models import Attendance_LeaveRequest
 from .models import Attendance_Log
 from datetime import date
@@ -55,9 +55,15 @@ from django.contrib.auth.decorators import user_passes_test
 from django.db.models import Prefetch
 from calendar import monthrange
 from dateutil.relativedelta import relativedelta
+
 from .forms import DailyReportForm
 from .models import DailyReport, ReportComment, ReportReaction
 from django.db.models import Count, Q
+
+from .forms import SectionReportForm, HourlyReportForm
+from .models import SectionReport, HourlyReport
+from .models import ReportComment, ReportReaction
+
 from django.utils import timezone
 from datetime import datetime
 from django.core.paginator import Paginator
@@ -607,7 +613,7 @@ def dashboard(request):
     has_checked_in = bool(mark_attendance and mark_attendance.check_in_time)
     has_checked_out = bool(mark_attendance and mark_attendance.check_out_time)
 
-    today_logs = Attendance_Log.objects.filter(employee=employee, timestamp__date=today).order_by('timestamp')
+    today_logs = Attendance_Attendance_data.objects.filter(employee=employee, date=today).order_by('date')
 
     # Leave Form
     leave_form = LeaveRequestForm()
@@ -637,7 +643,7 @@ def dashboard(request):
                 messages.warning(request, "Shift can't be changed after check-in.")
             return redirect('dashboard')
 
-    # Working hours calculation
+    # Working Hours Calculation
     working_hours_display = None
     if has_checked_in and has_checked_out:
         time_diff = (mark_attendance.check_out_time - mark_attendance.check_in_time).total_seconds() / 3600
@@ -678,30 +684,45 @@ def dashboard(request):
 
     shift_display = mark_attendance.get_shift_type_display() if mark_attendance and mark_attendance.shift_type else "Not Set"
 
-    # Daily Report
-    daily_report_form = DailyReportForm()
-    show_report_form = False
-    report_submitted = False
-    today_report = None
+    # Section and Hourly Reports
+    section_report_form = SectionReportForm()
+    hourly_report_form = HourlyReportForm()
 
-    if request.method == 'POST' and 'submit_report' in request.POST:
-       daily_report_form = DailyReportForm(request.POST)
-    if daily_report_form.is_valid():
-        report = daily_report_form.save(commit=False)
-        report.attendance = mark_attendance
-        report.save()
-        report_submitted = True
-        show_report_form = False
-        today_report = report
-    else:
-        today_report = DailyReport.objects.filter(attendance=mark_attendance).first()
-        report_submitted = today_report is not None
-        show_report_form = not report_submitted
-    
-    # ✅ Past Reports Queryset - outside context
-    past_reports = DailyReport.objects.filter(attendance__employee=employee).exclude(attendance=mark_attendance).select_related('attendance').order_by('-attendance__date')[:30]
+    if request.method == 'POST':
+        if 'submit_section_report' in request.POST:
+            section_report_form = SectionReportForm(request.POST)
+            if section_report_form.is_valid() and mark_attendance:
+                sr = section_report_form.save(commit=False)
+                sr.attendance = mark_attendance
+                sr.save()
+                messages.success(request, "Section report submitted successfully!")
+                return redirect('dashboard')
+            else:
+                messages.error(request, "Failed to submit section report. Please check the form.")
 
-    # Final context (✅ always defined)
+        elif 'submit_hourly_report' in request.POST:
+            hourly_report_form = HourlyReportForm(request.POST)
+            if hourly_report_form.is_valid() and mark_attendance:
+                hr = hourly_report_form.save(commit=False)
+                hr.attendance = mark_attendance
+                hr.save()
+                messages.success(request, "Hourly report submitted successfully!")
+                return redirect('dashboard')
+            else:
+                messages.error(request, "Failed to submit hourly report. Please check the form.")
+
+    # Fetch today's reports
+    today_section_reports = SectionReport.objects.filter(attendance=mark_attendance) if mark_attendance else []
+    today_hourly_reports = HourlyReport.objects.filter(attendance=mark_attendance) if mark_attendance else []
+
+    # Fetch past reports
+    past_section_reports = SectionReport.objects.filter(attendance__employee=employee).exclude(attendance=mark_attendance).order_by('-submitted_at')[:30]
+    past_hourly_reports = HourlyReport.objects.filter(attendance__employee=employee).exclude(attendance=mark_attendance).order_by('-submitted_at')[:30]
+
+    # Determine if report form should be shown
+    show_report_form = has_checked_in and not has_checked_out
+
+    # Context
     context = {
         'employee': employee,
         'mark_attendance': mark_attendance,
@@ -716,15 +737,22 @@ def dashboard(request):
         'month_options': month_options,
         'selected_month': selected_month or today_obj.strftime("%Y-%m"),
         'shift_display': shift_display,
-        'daily_report_form': daily_report_form,
         'show_report_form': show_report_form,
-        'report_submitted': report_submitted,
-        'today_report': today_report,
-        'past_reports': past_reports,
-          
+        'section_report_form': section_report_form,
+        'hourly_report_form': hourly_report_form,
+        'today_section_reports': today_section_reports,
+        'today_hourly_reports': today_hourly_reports,
+        'past_section_reports': past_section_reports,
+        'past_hourly_reports': past_hourly_reports,
     }
 
     return render(request, 'attendance/dashboard.html', context)
+
+def calculate_working_hours(time_diff):
+    hours = int(time_diff)
+    minutes = int((time_diff - hours) * 60)
+    return f"{hours} hr {minutes} min"
+
 
 # def public_reports(request):
 #     from_date = request.GET.get('from')
@@ -764,25 +792,46 @@ from django.db.models.functions import Concat
 def public_reports(request):
     from_date = request.GET.get('from')
     to_date = request.GET.get('to')
+    report_type = request.GET.get('type', 'hourly')  # default to 'hourly' or change as needed
 
-    # Base queryset with related objects and annotations
-    reports = DailyReport.objects.select_related('attendance__employee__user') \
-        .prefetch_related('reactions') \
-        .annotate(
-            employee_name=Concat(
-                F('attendance__employee__user__first_name'),
-                Value(' '),
-                F('attendance__employee__user__last_name'),
-                output_field=CharField()
-            ),
-            date=F('attendance__date'),
-            like_count=Count('reactions', filter=Q(reactions__reaction_type='like')),
-            love_count=Count('reactions', filter=Q(reactions__reaction_type='love')),
-            fire_count=Count('reactions', filter=Q(reactions__reaction_type='fire'))
-        ) \
-        .order_by('-attendance__date')
+    reports = []
+    model_name = ""
 
-    # Apply date filtering if provided
+    if report_type == 'hourly':
+        reports = HourlyReportForm.objects.select_related('attendance__employee__user') \
+            .prefetch_related('reactions') \
+            .annotate(
+                employee_name=Concat(
+                    F('attendance__employee__user__first_name'),
+                    Value(' '),
+                    F('attendance__employee__user__last_name'),
+                    output_field=CharField()
+                ),
+                date=F('attendance__date'),
+                like_count=Count('reactions', filter=Q(reactions__reaction_type='like')),
+                love_count=Count('reactions', filter=Q(reactions__reaction_type='love')),
+                fire_count=Count('reactions', filter=Q(reactions__reaction_type='fire'))
+            ).order_by('-submitted_at')
+        model_name = "Hourly Report"
+
+    elif report_type == 'section':
+        reports = SectionReportForm.objects.select_related('attendance__employee__user') \
+            .prefetch_related('reactions') \
+            .annotate(
+                employee_name=Concat(
+                    F('attendance__employee__user__first_name'),
+                    Value(' '),
+                    F('attendance__employee__user__last_name'),
+                    output_field=CharField()
+                ),
+                date=F('attendance__date'),
+                like_count=Count('reactions', filter=Q(reactions__reaction_type='like')),
+                love_count=Count('reactions', filter=Q(reactions__reaction_type='love')),
+                fire_count=Count('reactions', filter=Q(reactions__reaction_type='fire'))
+            ).order_by('-submitted_at')
+        model_name = "Section Report"
+
+    # Apply date filter
     if from_date and to_date:
         reports = reports.filter(attendance__date__range=[from_date, to_date])
 
@@ -790,26 +839,38 @@ def public_reports(request):
         'reports': reports,
         'from_date': from_date,
         'to_date': to_date,
+        'report_type': report_type,
+        'model_name': model_name,
     }
     return render(request, 'attendance/public_reports.html', context)
 
-
 @csrf_exempt
-def submit_comment(request, report_id):
+def submit_comment(request, report_type, report_id):
     if request.method == 'POST':
-        report = get_object_or_404(DailyReport, id=report_id)
+        if report_type == 'hourly':
+            report = get_object_or_404(HourlyReportForm, id=report_id)
+        elif report_type == 'section':
+            report = get_object_or_404(SectionReportForm, id=report_id)
+        else:
+            return redirect('public_reports')
+
         name = request.POST.get('name', 'Anonymous')
         comment = request.POST.get('comment')
         if comment:
             ReportComment.objects.create(report=report, name=name, comment=comment)
+
     return redirect('public_reports')
 
 @csrf_exempt
-def submit_reaction(request, report_id, reaction_type):
-    report = get_object_or_404(DailyReport, id=report_id)
-    ip = get_client_ip(request)
+def submit_reaction(request, report_type, report_id, reaction_type):
+    if report_type == 'hourly':
+        report = get_object_or_404(HourlyReportForm, id=report_id)
+    elif report_type == 'section':
+        report = get_object_or_404(SectionReportForm, id=report_id)
+    else:
+        return redirect('public_reports')
 
-    # Prevent duplicate reaction (optional)
+    ip = get_client_ip(request)
     if not ReportReaction.objects.filter(report=report, reaction_type=reaction_type, ip_address=ip).exists():
         ReportReaction.objects.create(report=report, reaction_type=reaction_type, ip_address=ip)
 
@@ -1828,3 +1889,202 @@ def announcement(request):
         Announcement.objects.create(title=tit,message=mes,attachment=att)
         return HttpResponse("done")
     return render(request,'layouts/admin_announcement.html')
+
+
+
+# Holiday
+
+def holiday_calendar_view(request):
+    return render(request, 'layouts/holiday_cal.html')
+
+def holiday_events(request):
+    holidays = Holiday.objects.all()
+    events = []
+
+    for holiday in holidays:
+        # Background event (just color)
+        events.append({
+            'start': holiday.date.strftime('%Y-%m-%d'),
+            'display': 'background',
+            'backgroundColor': "#f53f3f"
+        })
+
+        # Foreground event (title shown)
+        events.append({
+            'title': holiday.title,
+            'start': holiday.date.strftime('%Y-%m-%d'),
+            'color': '#f44336'
+        })
+
+    return JsonResponse(events, safe=False)
+
+def add_holiday(request):
+    if request.method=='POST':
+        title=request.POST.get('title')
+        date=request.POST.get('date')
+        Holiday.objects.create(title=title,date=date)
+        messages.success(request,"✅ Holiday saved successfully!")
+    return render(request,'layouts/holiday_cal.html')    
+
+def display_holiday(request):
+    dis_holiday=Holiday.objects.all().order_by('date')
+    return render(request, 'layouts/holiday_list.html', {'holidays': dis_holiday})
+
+def delete_holiday(request, pk):
+    holiday = get_object_or_404(Holiday, pk=pk)
+    holiday.delete()
+    return redirect('holiday_list')
+
+def edit_holiday(request, pk):
+    holiday = get_object_or_404(Holiday, pk=pk)
+
+    if request.method == 'POST':
+        title = request.POST.get('title')
+        date = request.POST.get('date')
+        holiday.title = title
+        holiday.date = date
+        holiday.save()
+        return redirect('holiday_list')
+
+    return render(request, 'layouts/holiday_list.html', {'holiday': holiday})
+
+def header_calander(request):
+    return render(request,'layouts/header_calander.html')
+
+
+#report views
+
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.db.models import Count, Q, F, Value, CharField
+from django.db.models.functions import Concat
+from django.views.decorators.csrf import csrf_exempt
+
+from .models import HourlyReport, SectionReport, ReportReaction, ReportComment
+
+
+from django.contrib.contenttypes.models import ContentType
+
+def public_reports(request):
+    from_date = request.GET.get('from')
+    to_date = request.GET.get('to')
+    report_type = request.GET.get('type', 'hourly')
+
+    reports = []
+    model = None
+    model_name = ""
+
+    if report_type == 'hourly':
+        model = HourlyReport
+        model_name = "Hourly Report"
+    elif report_type == 'section':
+        model = SectionReport
+        model_name = "Section Report"
+
+    if model:
+        reports = model.objects.select_related('attendance__employee__user') \
+            .annotate(
+                employee_name=Concat(
+                    F('attendance__employee__user__first_name'),
+                    Value(' '),
+                    F('attendance__employee__user__last_name'),
+                    output_field=CharField()
+                ),
+                date=F('attendance__date')
+            ).order_by('-submitted_at')
+
+        if from_date and to_date:
+            reports = reports.filter(attendance__date__range=[from_date, to_date])
+
+        content_type = ContentType.objects.get_for_model(model)
+        all_reactions = ReportReaction.objects.filter(content_type=content_type)
+        all_comments = ReportComment.objects.filter(content_type=content_type)
+
+        context = {
+            'reports': reports,
+            'from_date': from_date,
+            'to_date': to_date,
+            'report_type': report_type,
+            'model_name': model_name,
+            'all_reactions': all_reactions,
+            'all_comments': all_comments
+        }
+        return render(request, 'attendance/public_reports.html', context)
+
+
+@csrf_exempt
+def submit_comment(request, report_type, report_id):
+    if request.method == 'POST':
+        if report_type == 'hourly':
+            report = get_object_or_404(HourlyReport, id=report_id)
+        elif report_type == 'section':
+            report = get_object_or_404(SectionReport, id=report_id)
+        else:
+            return redirect('public_reports')
+
+        name = request.POST.get('name', 'Anonymous')
+        comment = request.POST.get('comment')
+
+        if comment:
+            ReportComment.objects.create(report=report, name=name, comment=comment)
+
+    return redirect(f'{request.META.get("HTTP_REFERER", "/public_reports")}?type={report_type}')
+
+
+from django.contrib.contenttypes.models import ContentType
+from django.shortcuts import get_object_or_404, redirect
+from .models import HourlyReport, SectionReport, ReportReaction
+
+@csrf_exempt
+def submit_reaction(request, report_type, report_id, reaction_type):
+    if report_type == 'hourly':
+        report = get_object_or_404(HourlyReport, id=report_id)
+    elif report_type == 'section':
+        report = get_object_or_404(SectionReport, id=report_id)
+    else:
+        return redirect('public_reports')
+
+    content_type = ContentType.objects.get_for_model(report._class_)
+    ip = get_client_ip(request)
+
+    if not ReportReaction.objects.filter(
+        content_type=content_type,
+        object_id=report.id,
+        reaction_type=reaction_type,
+        ip_address=ip
+    ).exists():
+        ReportReaction.objects.create(
+            content_type=content_type,
+            object_id=report.id,
+            reaction_type=reaction_type,
+            ip_address=ip
+        )
+
+    return redirect('public_reports')
+
+
+
+def get_client_ip(request):
+    x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+    return x_forwarded.split(',')[0] if x_forwarded else request.META.get('REMOTE_ADDR')    
+
+
+from django.shortcuts import redirect
+
+def auth_login(request):
+    try:
+        user_id = request.GET.get('id')
+        user_type = request.GET.get('type')
+
+        if user_type == 'Attendance' and user_id:
+            request.session['user_id'] = user_id
+            request.session['user_type'] = user_type
+            # You can add more session setup if needed
+
+            # ✅ Redirect to the real homepage of your attendance app
+            return redirect('home')  # or 'dashboard', whatever your actual route name is
+
+        return redirect('login')  # fallback if invalid
+    except Exception as e:
+        print("auth_login error:", e)
+        return redirect('login')

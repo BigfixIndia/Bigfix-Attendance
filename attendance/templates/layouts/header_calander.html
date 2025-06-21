@@ -1,9 +1,16 @@
-{% extends 'base.html' %}
 {% load static %}
-
-{% block content %}
-<style>
-     body {
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Government Holiday Calendar</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
             font-family: 'Inter', 'Arial', sans-serif;
             background-color: #f4f6f9;
             color: #333;
@@ -15,36 +22,8 @@
         .navbar-brand {
             font-weight: 600;
         }
-        .sidebar {
-            width: 240px;
-            position: fixed;
-            top: 0;
-            bottom: 0;
-            left: 0;
-            background-color: #2c3e50;
-            padding-top: 70px;
-            color: white;
-            transition: transform 0.3s ease;
-        }
-        .sidebar a {
-            color: #e0e0e0;
-            padding: 12px 20px;
-            display: flex;
-            align-items: center;
-            text-decoration: none;
-            transition: background 0.2s ease, padding-left 0.2s ease;
-        }
-        .sidebar a:hover {
-            background-color: #34495e;
-            padding-left: 25px;
-        }
-        .sidebar i {
-            margin-right: 10px;
-        }
         .main-content {
-            margin-left: 240px;
             padding: 30px;
-            transition: margin-left 0.3s ease;
         }
         #calendar {
             background: white;
@@ -85,7 +64,7 @@
             transition: background 0.2s ease;
         }
         .fc-day-sunday {
-            background-color: #ffe6e6 !important; /* Light red for Sundays */
+            background-color: #ffe6e6 !important;
         }
         .fc-event {
             border-radius: 5px;
@@ -94,7 +73,7 @@
             color: white;
         }
         .fc-event-holiday {
-            background-color: #4682B4; /* Blue for holidays */
+            background-color: #4682B4;
             border-color: #4682B4;
         }
         .fc-event-holiday:hover {
@@ -102,7 +81,7 @@
             border-color: #3a6d9c;
         }
         .fc-event-leave {
-            background-color: #28a745; /* Green for leave dates */
+            background-color: #28a745;
             border-color: #28a745;
         }
         .fc-event-leave:hover {
@@ -157,20 +136,20 @@
             margin-top: 5px;
             display: none;
         }
-        @media (max-width: 768px) {
-            .sidebar {
-                transform: translateX(-240px);
-            }
-            .main-content {
-                margin-left: 0;
-            }
-            .navbar .navbar-toggler {
-                display: block;
-            }
-        }
-</style>
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.css" rel="stylesheet">
-<div class="modal fade" id="addHolidayModal" tabindex="-1" aria-labelledby="addHolidayModalLabel" aria-hidden="true">
+    </style>
+</head>
+<body>
+    
+
+    <div class="main-content">
+        <h4 class="mb-4"><i class="fas fa-calendar-day me-2"></i>Government Holiday Calendar</h4>
+        
+        
+        <div id="calendar"></div>
+    </div>
+
+    <!-- Add Holiday Modal -->
+    <div class="modal fade" id="addHolidayModal" tabindex="-1" aria-labelledby="addHolidayModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -204,9 +183,7 @@
         </div>
     </div>
 
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/main.min.js"></script>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -221,7 +198,7 @@
                     right: 'dayGridMonth'
                 },
                 dayCellClassNames: function(arg) {
-                    if (arg.date.getDay() === 0) { // Sunday
+                    if (arg.date.getDay() === 0) {
                         return ['fc-day-sunday'];
                     }
                     return [];
@@ -235,7 +212,6 @@
             });
             calendar.render();
 
-            // Handle add holiday form submission
             $('#addHolidayForm').on('submit', function(e) {
                 e.preventDefault();
                 $('.error-message').hide().text('');
@@ -275,7 +251,6 @@
                 });
             });
 
-            // Function to get CSRF token from cookies
             function getCookie(name) {
                 let cookieValue = null;
                 if (document.cookie && document.cookie !== '') {
@@ -292,4 +267,5 @@
             }
         });
     </script>
-{% endblock %}
+</body>
+</html>
