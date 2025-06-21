@@ -110,20 +110,13 @@
                         <div class="col-md-4">
                             <input type="text" name="hour_time[]" class="form-control" placeholder="e.g. 12pm - 1pm">
                         </div>
-                        <div class="col-md-12 mt-4">
-                            <textarea name="hour_report[]" class="form-control" placeholder="Worked on task" maxlength="200" oninput="updateCharCount(this)"></textarea>
-                             <small class="text-muted">200 characters remaining</small>                        
+                        <div class="col-md-8">
+                            <input type="text" name="hour_report[]" class="form-control" placeholder="Worked on task">
                         </div>
                     </div>
                 </div>
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="addHourlyRow()">
-                        ➕ Add Row
-                    </button>
-                    <button type="submit" name="submit_hourly" class="btn btn-sm btn-primary">
-                        Submit Hourly Report
-                    </button>
-                </div>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="addHourlyRow()">➕ Add Row</button>
+                <button type="submit" name="submit_hourly" class="btn btn-primary mt-2">Submit Hourly Report</button>
             </form>
         </div>
     </div>
@@ -139,21 +132,11 @@
                 <div id="sectionInputs">
                     <div class="mb-2 section-group">
                         <input type="text" name="section_title[]" class="form-control mb-1" placeholder="Section Title">
-                       <textarea id="section_content" name="section_content[]" class="form-control" placeholder="Details" maxlength="200" oninput="updateCharCount(this)"></textarea>
-                       <small id="charCount">200 characters remaining</small>
-                    </div>
-                    <div id="section-container">
-                    
+                        <textarea name="section_content[]" class="form-control" placeholder="Details"></textarea>
                     </div>
                 </div>
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="addSectionRow()">
-                        ➕ Add Section
-                    </button>
-                    <button type="submit" name="submit_section" class="btn btn-sm btn-success">
-                        Submit Section Report
-                    </button>
-                </div>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="addSectionRow()">➕ Add Section</button>
+                <button type="submit" name="submit_section" class="btn btn-success mt-2">Submit Section Report</button>
             </form>
         </div>
     </div>
@@ -300,86 +283,26 @@ function toggleReportDisplay(id) {
 
 function addHourlyRow() {
     const container = document.getElementById('hourlyInputs');
-
     const group = document.createElement('div');
     group.className = 'row mb-2 hourly-group';
-
-    // Unique ID for each textarea and its counter
-    const uniqueId = `textarea-${Date.now()}`;
-
     group.innerHTML = `
-        <div class="col-md-4 mt-3">
+        <div class="col-md-4">
             <input type="text" name="hour_time[]" class="form-control" placeholder="e.g. 12pm - 1pm">
         </div>
-        <div class="col-md-12 mt-4">
-            <textarea id="${uniqueId}" name="hour_report[]" class="form-control" placeholder="Worked on task" maxlength="200"></textarea>
-            <small class="text-muted" id="${uniqueId}-counter">200 characters remaining</small>
-        </div>
-    `;
-
+        <div class="col-md-8">
+            <input type="text" name="hour_report[]" class="form-control" placeholder="Worked on task">
+        </div>`;
     container.appendChild(group);
-
-    // Add live character counter
-    const textarea = document.getElementById(uniqueId);
-    const counter = document.getElementById(`${uniqueId}-counter`);
-
-    textarea.addEventListener("input", function () {
-        const remaining = 200 - textarea.value.length;
-        counter.textContent = `${remaining} characters remaining`;
-    });
 }
 
-
-  function addSectionRow() {
-  const container = document.getElementById("section-container");
-
-  // Create wrapper div
-  const wrapper = document.createElement("div");
-  wrapper.className = "mb-2";
-
-  // Create textarea
-  const textarea = document.createElement("textarea");
-  textarea.name = "section_content[]";
-  textarea.className = "form-control";
-  textarea.placeholder = "Details";
-  textarea.maxLength = 200;
-
-  // Create character counter
-  const charCount = document.createElement("small");
-  charCount.className = "text-muted";
-  charCount.textContent = "200 characters remaining";
-
-  // Attach input listener
-  textarea.addEventListener("input", function () {
-    const remaining = 200 - textarea.value.length;
-    charCount.textContent = `${remaining} characters remaining`;
-  });
-
-  // Add elements to wrapper and container
-  wrapper.appendChild(textarea);
-  wrapper.appendChild(charCount);
-  container.appendChild(wrapper);
-}
-
-//  for default text area
-
-function updateCharCount(textarea) {
-    const maxLength = textarea.maxLength;
-    const currentLength = textarea.value.length;
-    document.getElementById("charCount").textContent = 
-      `${maxLength - currentLength} characters remaining`;
-  }
-
-  function updateCharCount(textarea) {
-    const max = textarea.maxLength;
-    const current = textarea.value.length;
-    const remaining = max - current;
-
-    // Find the <small> element right after the textarea
-    const counter = textarea.nextElementSibling;
-    if (counter && counter.tagName.toLowerCase() === 'small') {
-        counter.textContent = `${remaining} characters remaining`;
-    }
+function addSectionRow() {
+    const container = document.getElementById('sectionInputs');
+    const group = document.createElement('div');
+    group.className = 'mb-2 section-group';
+    group.innerHTML = `
+        <input type="text" name="section_title[]" class="form-control mb-1" placeholder="Section Title">
+        <textarea name="section_content[]" class="form-control" placeholder="Details"></textarea>`;
+    container.appendChild(group);
 }
 </script>
 {% endblock %}
