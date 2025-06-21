@@ -15,7 +15,8 @@
                         {% if employee.profile_pic %}
                             <img src="{{ employee.profile_pic.url }}?{% now 'U' %}"
                                  alt="Profile Picture" class="rounded-circle"
-                                 style="width: 120px; height: 120px; object-fit: cover;">
+                                 style="width: 120px; height: 120px; object-fit: cover;"
+                                 onerror="this.onerror=null; this.src='/static/images/apple-touch-icon.png';">
                         {% else %}
                             <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center"
                                  style="width: 120px; height: 120px;">
