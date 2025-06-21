@@ -1943,6 +1943,8 @@ def edit_holiday(request, pk):
 
     return render(request, 'layouts/holiday_list.html', {'holiday': holiday})
 
+def header_calander(request):
+    return render(request,'layouts/header_calander.html')
 
 
 #report views
@@ -2060,3 +2062,24 @@ def submit_reaction(request, report_type, report_id, reaction_type):
 def get_client_ip(request):
     x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
     return x_forwarded.split(',')[0] if x_forwarded else request.META.get('REMOTE_ADDR')    
+
+
+from django.shortcuts import redirect
+
+def auth_login(request):
+    try:
+        user_id = request.GET.get('id')
+        user_type = request.GET.get('type')
+
+        if user_type == 'Attendance' and user_id:
+            request.session['user_id'] = user_id
+            request.session['user_type'] = user_type
+            # You can add more session setup if needed
+
+            # ✅ Redirect to the real homepage of your attendance app
+            return redirect('home')  # or 'dashboard', whatever your actual route name is
+
+        return redirect('login')  # fallback if invalid
+    except Exception as e:
+        print("auth_login error:", e)
+        return redirect('login')
